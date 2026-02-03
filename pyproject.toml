@@ -22,11 +22,6 @@ authors = [
     {name = "Sai Pranav Krovvidi"}
 ]
 keywords = ["data-cleaning", "data-quality", "pandas", "etl", "data-analysis"]
-
-[project.urls]
-Homepage = "https://github.com/Pranav1011/DataWash"
-Repository = "https://github.com/Pranav1011/DataWash"
-Issues = "https://github.com/Pranav1011/DataWash/issues"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -37,12 +32,23 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Pranav1011/DataWash"
+Repository = "https://github.com/Pranav1011/DataWash"
+Issues = "https://github.com/Pranav1011/DataWash/issues"
+
 [project.optional-dependencies]
 ml = [
     "sentence-transformers>=2.2.0",
     "datasketch>=1.5.0",
 ]
 formats = [
+    "pyarrow>=10.0.0",
+    "openpyxl>=3.0.0",
+]
+all = [
+    "sentence-transformers>=2.2.0",
+    "datasketch>=1.5.0",
     "pyarrow>=10.0.0",
     "openpyxl>=3.0.0",
 ]

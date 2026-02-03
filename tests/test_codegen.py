@@ -1,4 +1,5 @@
 """Tests for code generation."""
+
 from __future__ import annotations
 import pytest
 from datawash.core.models import TransformationResult

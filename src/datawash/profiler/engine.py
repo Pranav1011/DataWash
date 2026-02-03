@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from typing import Any
 
 import pandas as pd
@@ -29,8 +30,18 @@ def profile_dataset(df: pd.DataFrame) -> DatasetProfile:
     logger.info("Profiling dataset: %d rows, %d columns", len(df), len(df.columns))
 
     columns: dict[str, ColumnProfile] = {}
-    for col_name in df.columns:
-        columns[col_name] = _profile_column(df[col_name])
+    use_progress = len(df) > 10000 or len(df.columns) > 20
+    if use_progress and sys.stderr.isatty():
+        from rich.progress import Progress
+
+        with Progress() as progress:
+            task = progress.add_task("Profiling columns...", total=len(df.columns))
+            for col_name in df.columns:
+                columns[col_name] = _profile_column(df[col_name])
+                progress.update(task, advance=1)
+    else:
+        for col_name in df.columns:
+            columns[col_name] = _profile_column(df[col_name])
 
     return DatasetProfile(
         row_count=len(df),
@@ -50,7 +61,10 @@ def _profile_column(series: pd.Series) -> ColumnProfile:
 
     # Compute type-appropriate statistics
     stats: dict[str, Any] = {}
-    if pd.api.types.is_numeric_dtype(series):
+    # Boolean columns should use categorical stats (quantile fails on bool)
+    if pd.api.types.is_bool_dtype(series):
+        stats = compute_categorical_stats(series)
+    elif pd.api.types.is_numeric_dtype(series):
         stats = compute_numeric_stats(series)
     else:
         stats = compute_categorical_stats(series)

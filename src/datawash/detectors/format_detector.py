@@ -33,13 +33,9 @@ class FormatDetector(BaseDetector):
                 findings.append(case_finding)
 
             # Check for mixed date formats
-            if (
-                col_name in profile.columns
-                and "date" in profile.columns[col_name].patterns
-            ):
-                date_finding = self._check_date_formats(col_name, clean)
-                if date_finding:
-                    findings.append(date_finding)
+            date_finding = self._check_date_formats(col_name, clean)
+            if date_finding:
+                findings.append(date_finding)
 
             # Check for mixed whitespace/padding
             ws_finding = self._check_whitespace(col_name, clean)
@@ -74,23 +70,38 @@ class FormatDetector(BaseDetector):
             )
         return None
 
+    _DATE_PATTERNS: list[tuple[str, str]] = [
+        ("iso", r"^\d{4}-\d{2}-\d{2}"),
+        ("slash_mdy", r"^\d{1,2}/\d{1,2}/\d{2,4}$"),
+        ("dash_dmy", r"^\d{1,2}-[A-Za-z]{3}-\d{2,4}$"),
+        ("named_mdy", r"^[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}$"),
+        ("named_dmy", r"^\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}$"),
+    ]
+
     def _check_date_formats(self, col_name: str, series: pd.Series) -> Finding | None:
-        slash_dates = series.str.match(r"^\d{1,2}/\d{1,2}/\d{2,4}$").sum()
-        dash_dates = series.str.match(r"^\d{4}-\d{2}-\d{2}").sum()
-        if slash_dates > 0 and dash_dates > 0:
+        # Count how many distinct format patterns appear
+        format_counts: dict[str, int] = {}
+        for fmt_name, pattern in self._DATE_PATTERNS:
+            count = int(series.str.match(pattern).sum())
+            if count > 0:
+                format_counts[fmt_name] = count
+
+        total_matched = sum(format_counts.values())
+        if len(format_counts) >= 2 and total_matched / len(series) >= 0.5:
+            detail_str = ", ".join(
+                f"{count} {name}" for name, count in format_counts.items()
+            )
             return Finding(
                 detector=self.name,
                 issue_type="inconsistent_date_format",
                 severity=Severity.MEDIUM,
                 columns=[col_name],
                 details={
-                    "slash_count": int(slash_dates),
-                    "dash_count": int(dash_dates),
+                    "format_counts": format_counts,
+                    "total_matched": total_matched,
                 },
                 message=(
-                    f"Column '{col_name}' has mixed date "
-                    f"formats ({slash_dates} slash-style, "
-                    f"{dash_dates} ISO-style)"
+                    f"Column '{col_name}' has mixed date " f"formats ({detail_str})"
                 ),
                 confidence=0.85,
             )

@@ -48,38 +48,41 @@ class TypeDetector(BaseDetector):
                         )
                     )
 
-            # Flag boolean-like columns (compare lowercased unique values)
+            # Flag boolean-like columns
             if is_string:
+                bool_values = {
+                    "true",
+                    "false",
+                    "yes",
+                    "no",
+                    "y",
+                    "n",
+                    "1",
+                    "0",
+                    "t",
+                    "f",
+                    "on",
+                    "off",
+                }
                 lowered_unique = set(
-                    df[col_name].dropna().astype(str).str.lower().unique()
+                    df[col_name].dropna().astype(str).str.strip().str.lower().unique()
                 )
-                if len(lowered_unique) <= 3:
-                    bool_sets = [
-                        {"true", "false"},
-                        {"yes", "no"},
-                        {"y", "n"},
-                        {"1", "0"},
-                        {"t", "f"},
-                        {"on", "off"},
-                    ]
-                    for bs in bool_sets:
-                        if lowered_unique <= bs:
-                            findings.append(
-                                Finding(
-                                    detector=self.name,
-                                    issue_type="boolean_as_string",
-                                    severity=Severity.LOW,
-                                    columns=[col_name],
-                                    details={"values": sorted(lowered_unique)},
-                                    message=(
-                                        f"Column '{col_name}' contains "
-                                        f"boolean-like values "
-                                        f"stored as strings"
-                                    ),
-                                    confidence=0.95,
-                                )
-                            )
-                            break
+                if lowered_unique <= bool_values and len(lowered_unique) >= 2:
+                    findings.append(
+                        Finding(
+                            detector=self.name,
+                            issue_type="boolean_as_string",
+                            severity=Severity.LOW,
+                            columns=[col_name],
+                            details={"values": sorted(lowered_unique)},
+                            message=(
+                                f"Column '{col_name}' contains "
+                                f"boolean-like values "
+                                f"stored as strings"
+                            ),
+                            confidence=0.95,
+                        )
+                    )
 
             # Report detected semantic types from patterns
             if col_profile.patterns:

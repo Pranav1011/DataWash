@@ -40,6 +40,7 @@ class MissingDetector(BaseDetector):
                     details={
                         "null_count": col_profile.null_count,
                         "null_ratio": col_profile.null_ratio,
+                        "dtype": col_profile.dtype,
                     },
                     message=(
                         f"Column '{col_name}' has "
@@ -50,10 +51,11 @@ class MissingDetector(BaseDetector):
                 )
             )
 
-        # Detect columns that are entirely empty strings
+        # Detect columns with empty or whitespace-only strings
         for col_name in df.columns:
             if pd.api.types.is_string_dtype(df[col_name]):
-                empty_count = int((df[col_name] == "").sum())
+                stripped = df[col_name].dropna().astype(str).str.strip()
+                empty_count = int((stripped == "").sum())
                 if empty_count > 0:
                     findings.append(
                         Finding(

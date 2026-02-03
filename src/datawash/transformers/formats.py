@@ -83,9 +83,11 @@ class FormatTransformer(BaseTransformer):
             elif operation == "standardize_dates":
                 fmt = params.get("target_format", "%Y-%m-%d")
                 lines.append(
-                    f"df[{repr(col)}] = pd.to_datetime("
-                    f"df[{repr(col)}], errors='coerce'"
-                    f").dt.strftime({repr(fmt)})"
+                    f"_parsed = pd.to_datetime(df[{repr(col)}], errors='coerce')"
+                )
+                lines.append(
+                    f"df[{repr(col)}] = _parsed.dt.strftime({repr(fmt)})"
+                    f".where(_parsed.notna(), df[{repr(col)}])"
                 )
         return "\n".join(lines)
 

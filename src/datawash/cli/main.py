@@ -111,6 +111,14 @@ def clean(
 
     format_transformation_summary(before_rows, len(clean_df), len(report._applied))
 
+    # Show before/after quality score
+    score_before = getattr(report, "_last_score_before", None)
+    score_after = getattr(report, "_last_score_after", None)
+    if score_before is not None and score_after is not None:
+        diff = score_after - score_before
+        sign = "+" if diff >= 0 else ""
+        console.print(f"Quality score: {score_before} → {score_after} ({sign}{diff})")
+
     if codegen:
         code = report.generate_code()
         codegen.write_text(code)

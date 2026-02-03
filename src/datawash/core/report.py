@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any, Optional
 
 import pandas as pd
+from rich.console import Console
+from rich.table import Table
 
 from datawash.adapters import load_dataframe
 from datawash.codegen import generate_code as _generate_code
@@ -21,6 +23,7 @@ from datawash.core.models import (
 from datawash.detectors import run_all_detectors
 from datawash.profiler import profile_dataset
 from datawash.suggestors import generate_suggestions
+from datawash.suggestors.engine import _sort_by_execution_order
 from datawash.transformers import run_transformer
 
 logger = logging.getLogger(__name__)
@@ -115,33 +118,149 @@ class Report:
         # For now, return all suggestions. Use-case filtering is Phase 2.
         return list(self._suggestions)
 
+    def _compute_quality_score(self, df: pd.DataFrame) -> int:
+        """Compute quality score for an arbitrary DataFrame."""
+        from datawash.detectors import run_all_detectors as _detect
+        from datawash.profiler import profile_dataset as _profile
+
+        prof = _profile(df)
+        findings = _detect(df, prof, enabled=self._config.detectors.enabled)
+        score = 100.0
+        if prof.row_count == 0:
+            return 100
+        for f in findings:
+            if f.severity == Severity.HIGH:
+                penalty = 10.0
+            elif f.severity == Severity.MEDIUM:
+                penalty = 5.0
+            else:
+                penalty = 2.0
+            penalty *= f.confidence
+            score -= penalty
+        return max(0, min(100, int(score)))
+
     def apply(self, suggestion_ids: list[int]) -> pd.DataFrame:
         """Apply selected suggestions by ID, return cleaned DataFrame."""
+        score_before = self.quality_score
         result_df = self._df.copy()
         id_map = {s.id: s for s in self._suggestions}
         self._applied = []
 
+        # Collect and sort suggestions by execution order
+        suggestions_to_apply = []
         for sid in suggestion_ids:
             suggestion = id_map.get(sid)
             if suggestion is None:
                 logger.warning("Suggestion ID %d not found, skipping", sid)
                 continue
+            suggestions_to_apply.append(suggestion)
+
+        # Sort by transformation execution order to prevent conflicts
+        suggestions_to_apply = _sort_by_execution_order(suggestions_to_apply)
+
+        for suggestion in suggestions_to_apply:
             result_df, tx_result = run_transformer(
                 suggestion.transformer, result_df, **suggestion.params
             )
             self._applied.append(tx_result)
             logger.info(
                 "Applied suggestion %d (%s): %d rows affected",
-                sid,
+                suggestion.id,
                 suggestion.action,
                 tx_result.rows_affected,
             )
 
+        score_after = self._compute_quality_score(result_df)
+        diff = score_after - score_before
+        sign = "+" if diff >= 0 else ""
+        logger.info(
+            "Quality score: %d → %d (%s%d)", score_before, score_after, sign, diff
+        )
+        self._last_score_before = score_before
+        self._last_score_after = score_after
         return result_df
 
     def apply_all(self) -> pd.DataFrame:
         """Apply all suggestions and return cleaned DataFrame."""
         return self.apply([s.id for s in self._suggestions])
+
+    def apply_interactive(
+        self, input_fn: Any = None, console: Optional[Console] = None
+    ) -> pd.DataFrame:
+        """Interactively apply suggestions with user prompts.
+
+        Args:
+            input_fn: Callable for getting user input (default: builtin input).
+                      Useful for testing with monkeypatch.
+            console: Optional Rich Console for output.
+        """
+        if input_fn is None:
+            input_fn = input
+        if console is None:
+            console = Console()
+
+        score_before = self.quality_score
+        result_df = self._df.copy()
+        self._applied = []
+        apply_all = False
+
+        # Sort suggestions by execution order to prevent conflicts
+        sorted_suggestions = _sort_by_execution_order(list(self._suggestions))
+
+        for suggestion in sorted_suggestions:
+            if not apply_all:
+                table = Table(title=f"Suggestion #{suggestion.id}", show_lines=True)
+                table.add_column("Field", style="bold")
+                table.add_column("Value")
+                table.add_row("Action", suggestion.action)
+                table.add_row("Priority", suggestion.priority.value)
+                table.add_row("Impact", suggestion.impact)
+                table.add_row("Rationale", suggestion.rationale)
+                cols_list = suggestion.params.get("columns", [])
+                if cols_list:
+                    table.add_row("Columns", ", ".join(cols_list))
+                else:
+                    table.add_row("Columns", "all")
+                console.print(table)
+
+                # Show preview of affected rows
+                cols = suggestion.params.get("columns", [])
+                valid_cols = [c for c in cols if c in result_df.columns]
+                if valid_cols:
+                    affected_preview = result_df[valid_cols].head(5)
+                    console.print("[dim]Preview (first 5 rows):[/dim]")
+                    console.print(affected_preview.to_string())
+
+                raw_choice = input_fn(
+                    "\n[a]pply / [s]kip / apply [A]ll / [q]uit: "
+                ).strip()
+                choice = raw_choice.lower()
+                if choice == "q":
+                    break
+                elif choice == "s":
+                    continue
+                elif choice == "all" or raw_choice == "A":
+                    apply_all = True
+                elif choice not in ("a", "apply", ""):
+                    continue
+
+            result_df, tx_result = run_transformer(
+                suggestion.transformer, result_df, **suggestion.params
+            )
+            self._applied.append(tx_result)
+            console.print(
+                f"[green]✓ Applied:[/green] {suggestion.action} "
+                f"({tx_result.rows_affected} rows affected)"
+            )
+
+        score_after = self._compute_quality_score(result_df)
+        diff = score_after - score_before
+        sign = "+" if diff >= 0 else ""
+        msg = f"\n[bold]Quality score: {score_before} → {score_after} ({sign}{diff})[/bold]"
+        console.print(msg)
+        self._last_score_before = score_before
+        self._last_score_after = score_after
+        return result_df
 
     def generate_code(self, style: str = "function") -> str:
         """Generate Python code for applied transformations.

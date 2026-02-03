@@ -92,7 +92,7 @@ datawash codegen data.csv --apply-all --style function
 
 #### Data Transformations (6 Transformers)
 - **Duplicates**: Remove exact duplicate rows
-- **Missing data**: Drop rows, fill with median/mode/custom value, empty string to NaN
+- **Missing data**: Drop rows, fill with median/mode/custom value, clean empty strings (combined convert+fill)
 - **Type conversion**: Convert to numeric, boolean, datetime
 - **Format standardization**: Strip whitespace, standardize case (upper/lower/title), normalize dates
 - **Column operations**: Drop, rename, merge columns
@@ -102,6 +102,8 @@ datawash codegen data.csv --apply-all --style function
 - **Use-case aware**: Prioritization for ML, analytics, export, or general purposes
 - **Contextual rationale**: Each suggestion includes why it's recommended
 - **Selective application**: Apply all, specific IDs, or interactive review
+- **Conflict resolution**: Automatic exclusion of conflicting transformations (e.g., no case changes on boolean/date columns)
+- **Execution ordering**: Transformations applied in optimal order to prevent conflicts
 
 #### Code Generation
 - **Reproducible workflows**: Generate Python code from applied transformations
@@ -186,7 +188,7 @@ Choose a use case to get prioritized suggestions:
 ### Statistics
 - **~2,600 lines** of source code
 - **~1,000 lines** of test code  
-- **108 tests** with **92% coverage**
+- **114 tests** with **92% coverage**
 - **10 modules** fully implemented
 - **1 module** (ml) planned for Phase 4
 

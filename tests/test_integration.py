@@ -1,4 +1,5 @@
 """Integration tests for end-to-end workflows."""
+
 from __future__ import annotations
 from pathlib import Path
 import pandas as pd
@@ -63,3 +64,40 @@ def test_repr_html(messy_df: pd.DataFrame) -> None:
     html = report._repr_html_()
     assert "<div" in html
     assert "DataWash" in html
+
+
+def test_apply_interactive_apply_all(messy_df: pd.DataFrame) -> None:
+    """Test apply_interactive with 'A' (apply all) on first prompt."""
+    report = analyze(messy_df)
+    inputs = iter(["A"])
+    clean_df = report.apply_interactive(input_fn=lambda _prompt: next(inputs))
+    assert isinstance(clean_df, pd.DataFrame)
+    assert len(report._applied) > 0
+
+
+def test_apply_interactive_skip_then_quit(messy_df: pd.DataFrame) -> None:
+    """Test apply_interactive with skip then quit."""
+    report = analyze(messy_df)
+    responses = iter(["s", "q"])
+    clean_df = report.apply_interactive(input_fn=lambda _prompt: next(responses))
+    assert isinstance(clean_df, pd.DataFrame)
+    # Should have applied 0 suggestions (skipped first, quit on second)
+    assert len(report._applied) == 0
+
+
+def test_apply_interactive_apply_one(messy_df: pd.DataFrame) -> None:
+    """Test apply_interactive applying one then quitting."""
+    report = analyze(messy_df)
+    responses = iter(["a", "q"])
+    clean_df = report.apply_interactive(input_fn=lambda _prompt: next(responses))
+    assert isinstance(clean_df, pd.DataFrame)
+    assert len(report._applied) == 1
+
+
+def test_apply_stores_quality_scores(messy_df: pd.DataFrame) -> None:
+    """Test that apply() stores before/after quality scores."""
+    report = analyze(messy_df)
+    report.apply_all()
+    assert hasattr(report, "_last_score_before")
+    assert hasattr(report, "_last_score_after")
+    assert report._last_score_after >= report._last_score_before

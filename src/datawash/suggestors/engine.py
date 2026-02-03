@@ -3,11 +3,119 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 
 from datawash.core.models import Finding, Severity, Suggestion
 from datawash.suggestors.prioritizer import sort_suggestions
 
 logger = logging.getLogger(__name__)
+
+
+# Transformation execution order - later phases should not undo earlier phases
+# The tuple is (transformer, operation/strategy) for precise matching
+TRANSFORMATION_ORDER: list[tuple[str, str]] = [
+    # Phase 1: Structural cleaning (affects row count)
+    ("duplicates", "drop_duplicates"),
+    ("missing", "drop_rows"),
+    # Phase 2: Value normalization (changes string values)
+    ("formats", "strip_whitespace"),
+    ("formats", "lowercase"),
+    ("formats", "uppercase"),
+    ("formats", "titlecase"),
+    ("missing", "clean_empty_strings"),  # combined: empty→NaN→fill
+    # Phase 3: Missing value handling (fills NaN)
+    ("missing", "fill_mode"),
+    ("missing", "fill_median"),
+    ("missing", "fill_value"),
+    ("missing", "empty_to_nan"),  # legacy, prefer clean_empty_strings
+    # Phase 4: Type conversion (after all string cleaning done)
+    ("types", "boolean"),
+    ("types", "numeric"),
+    ("formats", "standardize_dates"),
+    # Phase 5: Outlier handling (after types are correct)
+    ("missing", "clip_outliers"),
+    # Phase 6: Column operations (last)
+    ("columns", "drop"),
+    ("columns", "rename"),
+    ("columns", "review_merge"),
+]
+
+
+def _get_transform_order(transformer: str, params: dict) -> int:
+    """Get execution order for a transformation."""
+    # Determine the operation/strategy key
+    if transformer == "missing":
+        key = params.get("strategy", "")
+    elif transformer == "formats":
+        key = params.get("operation", "")
+    elif transformer == "types":
+        key = params.get("target_type", "")
+    elif transformer == "duplicates":
+        key = "drop_duplicates"
+    elif transformer == "columns":
+        key = params.get("operation", "")
+    else:
+        key = ""
+
+    for i, (t, op) in enumerate(TRANSFORMATION_ORDER):
+        if t == transformer and op == key:
+            return i
+    return 999  # Unknown transformations go last
+
+
+# Exclusion rules: if a column has suggestion A, exclude suggestion B for same column
+# Key: (transformer, operation/strategy), Value: list of (transformer, operation) to exclude
+EXCLUSION_RULES: dict[tuple[str, str], list[tuple[str, str]]] = {
+    # If column will be converted to boolean, don't suggest case changes
+    ("types", "boolean"): [
+        ("formats", "lowercase"),
+        ("formats", "uppercase"),
+        ("formats", "titlecase"),
+    ],
+    # If column will be converted to datetime, don't suggest case changes
+    ("formats", "standardize_dates"): [
+        ("formats", "lowercase"),
+        ("formats", "uppercase"),
+        ("formats", "titlecase"),
+    ],
+    # If column will be converted to numeric, don't suggest case changes
+    ("types", "numeric"): [
+        ("formats", "lowercase"),
+        ("formats", "uppercase"),
+        ("formats", "titlecase"),
+    ],
+}
+
+
+def _get_transform_key(transformer: str, params: dict) -> tuple[str, str]:
+    """Get the (transformer, operation) key for exclusion matching."""
+    if transformer == "missing":
+        return (transformer, params.get("strategy", ""))
+    elif transformer == "formats":
+        return (transformer, params.get("operation", ""))
+    elif transformer == "types":
+        return (transformer, params.get("target_type", ""))
+    elif transformer == "duplicates":
+        return (transformer, "drop_duplicates")
+    elif transformer == "columns":
+        return (transformer, params.get("operation", ""))
+    return (transformer, "")
+
+
+def _missing_strategy(finding: Finding) -> str:
+    """Choose fill strategy based on column dtype and null ratio."""
+    if finding.details.get("null_ratio", 0) > 0.5:
+        return "drop_rows"
+    dtype = finding.details.get("dtype", "")
+    # Check for numeric types
+    if any(kw in dtype for kw in ("int", "float", "Int", "Float", "number")):
+        return "fill_median"
+    # Check for boolean types
+    if "bool" in dtype.lower():
+        return "fill_mode"
+    # String/object/categorical → fill_mode
+    return "fill_mode"
+
 
 # Maps (issue_type) -> (action, transformer, param_builder, impact, rationale)
 _SUGGESTION_MAP: dict[str, dict] = {
@@ -16,18 +124,20 @@ _SUGGESTION_MAP: dict[str, dict] = {
         "transformer": "missing",
         "params_fn": lambda f: {
             "columns": f.columns,
-            "strategy": (
-                "drop_rows" if f.details.get("null_ratio", 0) > 0.5 else "fill_median"
-            ),
+            "strategy": _missing_strategy(f),
         },
         "impact": "Removes or fills null values to prevent errors",
         "rationale": "Missing values cause errors in ML and analysis",
     },
     "empty_strings": {
-        "action": "Convert empty strings to NaN",
+        "action": "Clean empty strings",
         "transformer": "missing",
-        "params_fn": lambda f: {"columns": f.columns, "strategy": "empty_to_nan"},
-        "impact": "Standardizes missing value representation",
+        # Use combined strategy that converts empty→NaN and fills in one step
+        "params_fn": lambda f: {
+            "columns": f.columns,
+            "strategy": "clean_empty_strings",
+        },
+        "impact": "Converts empty strings to proper values",
         "rationale": "Empty strings are often unintentional missing values",
     },
     "duplicate_rows": {
@@ -123,6 +233,47 @@ _USE_CASE_BOOSTS: dict[str, dict[str, float]] = {
 }
 
 
+def _apply_exclusion_rules(suggestions: list[Suggestion]) -> list[Suggestion]:
+    """Remove suggestions that conflict with higher-priority transformations."""
+    # Build a map of column → list of (transform_key, suggestion)
+    col_transforms: dict[str, list[tuple[tuple[str, str], Suggestion]]] = defaultdict(
+        list
+    )
+
+    for s in suggestions:
+        key = _get_transform_key(s.transformer, s.params)
+        for col in s.params.get("columns", []):
+            col_transforms[col].append((key, s))
+
+    # Find suggestions to exclude
+    excluded_ids: set[int] = set()
+
+    for col, transforms in col_transforms.items():
+        # Check each transform against exclusion rules
+        for key, _s in transforms:
+            if key in EXCLUSION_RULES:
+                # This transform excludes certain others for the same column
+                to_exclude = EXCLUSION_RULES[key]
+                for other_key, other_s in transforms:
+                    if other_key in to_exclude:
+                        excluded_ids.add(id(other_s))
+                        logger.debug(
+                            "Excluding %s for column '%s' due to %s",
+                            other_key,
+                            col,
+                            key,
+                        )
+
+    return [s for s in suggestions if id(s) not in excluded_ids]
+
+
+def _sort_by_execution_order(suggestions: list[Suggestion]) -> list[Suggestion]:
+    """Sort suggestions by transformation execution order."""
+    return sorted(
+        suggestions, key=lambda s: _get_transform_order(s.transformer, s.params)
+    )
+
+
 def generate_suggestions(
     findings: list[Finding],
     max_suggestions: int = 50,
@@ -148,10 +299,16 @@ def generate_suggestions(
         elif boost >= 1.3 and priority == Severity.MEDIUM:
             priority = Severity.HIGH
 
+        action = mapping["action"]
+        # Include column names in action text for column-specific suggestions
+        if finding.columns and len(finding.columns) <= 3:
+            col_str = ", ".join(f"'{c}'" for c in finding.columns)
+            action = f"{action} in {col_str}"
+
         suggestion = Suggestion(
             id=0,
             finding=finding,
-            action=mapping["action"],
+            action=action,
             transformer=mapping["transformer"],
             params=mapping["params_fn"](finding),
             priority=priority,
@@ -160,5 +317,11 @@ def generate_suggestions(
         )
         suggestions.append(suggestion)
 
+    # Step 1: Apply exclusion rules (remove conflicting suggestions)
+    suggestions = _apply_exclusion_rules(suggestions)
+
+    # Step 2: Sort by priority (for display)
     suggestions = sort_suggestions(suggestions)
+
+    # Step 3: Assign IDs and limit
     return suggestions[:max_suggestions]

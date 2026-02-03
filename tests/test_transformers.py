@@ -1,4 +1,5 @@
 """Tests for transformers."""
+
 from __future__ import annotations
 import numpy as np
 import pandas as pd
@@ -22,35 +23,72 @@ class TestDuplicateTransformer:
 class TestMissingTransformer:
     def test_drop_rows(self) -> None:
         df = pd.DataFrame({"a": [1, None, 3], "b": ["x", "y", "z"]})
-        result_df, result = run_transformer("missing", df, strategy="drop_rows", columns=["a"])
+        result_df, result = run_transformer(
+            "missing", df, strategy="drop_rows", columns=["a"]
+        )
         assert len(result_df) == 2
 
     def test_fill_median(self) -> None:
         df = pd.DataFrame({"a": [1.0, None, 3.0, 5.0]})
-        result_df, result = run_transformer("missing", df, strategy="fill_median", columns=["a"])
+        result_df, result = run_transformer(
+            "missing", df, strategy="fill_median", columns=["a"]
+        )
         assert result_df["a"].isna().sum() == 0
         assert result_df["a"].iloc[1] == 3.0  # median of 1, 3, 5
 
     def test_fill_value(self) -> None:
         df = pd.DataFrame({"a": ["x", None, "z"]})
-        result_df, result = run_transformer("missing", df, strategy="fill_value", columns=["a"], fill_value="MISSING")
+        result_df, result = run_transformer(
+            "missing", df, strategy="fill_value", columns=["a"], fill_value="MISSING"
+        )
         assert result_df["a"].iloc[1] == "MISSING"
 
     def test_empty_to_nan(self) -> None:
         df = pd.DataFrame({"a": ["x", "", "z"]})
-        result_df, result = run_transformer("missing", df, strategy="empty_to_nan", columns=["a"])
+        result_df, result = run_transformer(
+            "missing", df, strategy="empty_to_nan", columns=["a"]
+        )
         assert pd.isna(result_df["a"].iloc[1])
+
+    def test_clean_empty_strings_fills_with_mode(self) -> None:
+        """clean_empty_strings converts empty/whitespace to NaN and fills in one step."""
+        df = pd.DataFrame({"a": ["x", "", "x", "  ", "y"]})
+        result_df, result = run_transformer(
+            "missing", df, strategy="clean_empty_strings", columns=["a"]
+        )
+        # No NaN values should remain
+        assert result_df["a"].isna().sum() == 0
+        # Empty strings should be filled with mode ("x")
+        assert result_df["a"].iloc[1] == "x"
+        assert result_df["a"].iloc[3] == "x"
+
+    def test_clean_empty_strings_uses_specified_fill_value(self) -> None:
+        """clean_empty_strings can use a custom fill value."""
+        df = pd.DataFrame({"a": ["x", "", "y"]})
+        result_df, result = run_transformer(
+            "missing",
+            df,
+            strategy="clean_empty_strings",
+            columns=["a"],
+            fill_strategy="value",
+            fill_value="UNKNOWN",
+        )
+        assert result_df["a"].iloc[1] == "UNKNOWN"
 
 
 class TestTypeTransformer:
     def test_to_numeric(self) -> None:
         df = pd.DataFrame({"a": ["1", "2", "3"]})
-        result_df, result = run_transformer("types", df, columns=["a"], target_type="numeric")
+        result_df, result = run_transformer(
+            "types", df, columns=["a"], target_type="numeric"
+        )
         assert pd.api.types.is_numeric_dtype(result_df["a"])
 
     def test_to_boolean(self) -> None:
         df = pd.DataFrame({"a": ["yes", "no", "yes"]})
-        result_df, result = run_transformer("types", df, columns=["a"], target_type="boolean")
+        result_df, result = run_transformer(
+            "types", df, columns=["a"], target_type="boolean"
+        )
         assert result_df["a"].iloc[0] == True
         assert result_df["a"].iloc[1] == False
 
@@ -58,25 +96,33 @@ class TestTypeTransformer:
 class TestFormatTransformer:
     def test_strip_whitespace(self) -> None:
         df = pd.DataFrame({"a": [" hello ", "world ", " foo"]})
-        result_df, result = run_transformer("formats", df, columns=["a"], operation="strip_whitespace")
+        result_df, result = run_transformer(
+            "formats", df, columns=["a"], operation="strip_whitespace"
+        )
         assert result_df["a"].tolist() == ["hello", "world", "foo"]
 
     def test_lowercase(self) -> None:
         df = pd.DataFrame({"a": ["Hello", "WORLD", "Foo"]})
-        result_df, result = run_transformer("formats", df, columns=["a"], operation="lowercase")
+        result_df, result = run_transformer(
+            "formats", df, columns=["a"], operation="lowercase"
+        )
         assert result_df["a"].tolist() == ["hello", "world", "foo"]
 
 
 class TestColumnTransformer:
     def test_drop_columns(self) -> None:
         df = pd.DataFrame({"a": [1], "b": [2], "c": [3]})
-        result_df, result = run_transformer("columns", df, columns=["b"], operation="drop")
+        result_df, result = run_transformer(
+            "columns", df, columns=["b"], operation="drop"
+        )
         assert "b" not in result_df.columns
         assert "a" in result_df.columns
 
     def test_rename_columns(self) -> None:
         df = pd.DataFrame({"old_name": [1]})
-        result_df, result = run_transformer("columns", df, operation="rename", mapping={"old_name": "new_name"})
+        result_df, result = run_transformer(
+            "columns", df, operation="rename", mapping={"old_name": "new_name"}
+        )
         assert "new_name" in result_df.columns
 
 
@@ -88,5 +134,10 @@ class TestCategoryTransformer:
 
     def test_mapping(self) -> None:
         df = pd.DataFrame({"a": ["US", "USA", "United States"]})
-        result_df, result = run_transformer("categories", df, columns=["a"], mapping={"USA": "US", "United States": "US"})
+        result_df, result = run_transformer(
+            "categories",
+            df,
+            columns=["a"],
+            mapping={"USA": "US", "United States": "US"},
+        )
         assert result_df["a"].tolist() == ["US", "US", "US"]

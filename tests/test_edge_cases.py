@@ -1,4 +1,5 @@
 """Edge case and coverage-boosting tests."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -11,7 +12,10 @@ from datawash.core.exceptions import AdapterError, DataWashError
 from datawash.core.models import Severity
 from datawash.profiler import profile_dataset
 from datawash.profiler.patterns import detect_column_patterns
-from datawash.profiler.statistics import compute_categorical_stats, compute_numeric_stats
+from datawash.profiler.statistics import (
+    compute_categorical_stats,
+    compute_numeric_stats,
+)
 from datawash.detectors.format_detector import FormatDetector
 from datawash.detectors.outlier_detector import OutlierDetector
 from datawash.detectors.registry import get_all_detectors, run_all_detectors
@@ -98,6 +102,7 @@ class TestDetectorEdgeCases:
         df = pd.DataFrame({"a": [1, 2, 3]})
         profile = profile_dataset(df)
         from datawash.detectors.duplicate_detector import DuplicateDetector
+
         findings = DuplicateDetector().detect(df, profile)
         assert len(findings) == 0
 
@@ -113,6 +118,16 @@ class TestTransformerEdgeCases:
             "missing", df, strategy="fill_mode", columns=["a"]
         )
         assert result_df["a"].isna().sum() == 0
+
+    def test_fill_mode_all_null_leaves_unchanged(self) -> None:
+        """fill_mode on all-null column should leave data unchanged, not drop rows."""
+        df = pd.DataFrame({"a": [None, None, None]})
+        result_df, result = run_transformer(
+            "missing", df, strategy="fill_mode", columns=["a"]
+        )
+        # Should still have 3 rows (not dropped)
+        assert len(result_df) == 3
+        assert result.rows_affected == 0
 
     def test_formats_uppercase(self) -> None:
         df = pd.DataFrame({"a": ["hello", "world"]})
@@ -148,10 +163,10 @@ class TestTransformerEdgeCases:
 
     def test_types_string(self) -> None:
         df = pd.DataFrame({"a": [1, 2, 3]})
-        result_df, _ = run_transformer(
-            "types", df, columns=["a"], target_type="string"
+        result_df, _ = run_transformer("types", df, columns=["a"], target_type="string")
+        assert result_df["a"].dtype == object or pd.api.types.is_string_dtype(
+            result_df["a"]
         )
-        assert result_df["a"].dtype == object or pd.api.types.is_string_dtype(result_df["a"])
 
     def test_columns_merge(self) -> None:
         df = pd.DataFrame({"first": ["A", "B"], "last": ["X", "Y"]})
