@@ -1,0 +1,41 @@
+order_id,customer_id,order_date,product_category,quantity,unit_price,total_amount,status,shipping_priority
+1001,1,2024-01-05,Electronics,2,299.99,599.98,completed,Standard
+1002,2,05/01/2024,  electronics  ,1,149.50,149.50,COMPLETED,EXPRESS
+1003,3,Jan 6, 2024,ELECTRONICS,3,89.99,269.97,Completed,standard
+1004,4,2024/01/07,Clothing,5,45.00,225.00,pending,Priority
+1005,5,07-Jan-2024,clothing,2,79.99,159.98,PENDING,STANDARD
+1006,6,2024-01-08,  Clothing  ,1,120.00,120.00,Pending,express
+1007,7,January 9, 2024,Home & Garden,4,35.50,142.00,shipped,Standard
+1008,8,2024/01/10,home & garden,2,250.00,500.00,SHIPPED,Priority
+1009,9,10-Jan-2024,HOME & GARDEN,1,89.99,89.99,Shipped,STANDARD
+1010,10,2024-01-11,Books,10,15.99,159.90,completed,standard
+1011,11,Jan 12, 2024,  books  ,5,24.99,124.95,COMPLETED,Express
+1012,12,2024/01/13,BOOKS,3,19.99,59.97,Completed,priority
+1013,13,13-Jan-2024,Electronics,1,999.99,999.99,cancelled,Standard
+1014,14,January 14, 2024,electronics,2,450.00,900.00,CANCELLED,express
+1015,15,2024-01-15,  Electronics  ,1,75.00,75.00,Cancelled,STANDARD
+1016,16,15/01/2024,Sports,3,65.00,195.00,completed,Priority
+1017,17,2024/01/16,sports,1,199.99,199.99,COMPLETED,standard
+1018,18,Jan 17, 2024,SPORTS,2,85.50,171.00,Completed,EXPRESS
+1019,19,2024-01-18,Toys,4,29.99,119.96,pending,priority
+1020,20,18-Jan-2024,  toys  ,6,45.00,270.00,PENDING,Standard
+1021,21,January 19, 2024,TOYS,2,89.99,179.98,Pending,express
+1022,22,2024/01/20,Beauty,3,55.00,165.00,shipped,STANDARD
+1023,23,20-Jan-2024,beauty,1,125.00,125.00,SHIPPED,Priority
+1024,24,2024-01-21,  Beauty  ,5,35.99,179.95,Shipped,standard
+1025,25,Jan 22, 2024,Food,20,8.99,179.80,completed,EXPRESS
+1026,1,2024/01/23,food,15,12.50,187.50,COMPLETED,priority
+1027,2,23-Jan-2024,FOOD,10,5.99,59.90,Completed,Standard
+1028,3,January 24, 2024,Electronics,1,1299.99,1299.99,pending,express
+1029,4,2024-01-25,Clothing,3,95.00,285.00,PENDING,STANDARD
+1030,5,25/01/2024,Home & Garden,2,175.00,350.00,Pending,Priority
+1031,6,2024/01/26,Books,8,22.99,183.92,shipped,standard
+1032,7,Jan 27, 2024,Sports,1,299.99,299.99,SHIPPED,Express
+1033,8,2024-01-28,Toys,3,75.00,225.00,Shipped,priority
+1034,9,28-Jan-2024,Beauty,2,89.99,179.98,completed,Standard
+1035,10,January 29, 2024,Food,25,6.99,174.75,COMPLETED,express
+1036,11,2024/01/30,  electronics  ,1,549.99,549.99,Completed,STANDARD
+1037,12,30-Jan-2024,clothing,4,55.00,220.00,pending,Priority
+1038,13,2024-01-31,HOME & GARDEN,1,450.00,450.00,PENDING,standard
+1039,14,Jan 31, 2024,  books  ,6,18.99,113.94,Pending,EXPRESS
+1040,15,2024/02/01,SPORTS,2,145.00,290.00,shipped,priority

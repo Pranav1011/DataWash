@@ -1,10 +1,46 @@
 # DataWash
 
-**Intelligent data cleaning and quality analysis for Python.**
+<p align="center">
+  <strong>Intelligent data cleaning and quality analysis for Python</strong>
+</p>
 
-DataWash analyzes tabular data, detects quality issues using rules and statistics, suggests prioritized fixes, and generates reproducible Python code for transformations. 
+<p align="center">
+  <a href="#installation">Installation</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#features">Features</a> •
+  <a href="#documentation">Documentation</a> •
+  <a href="#examples">Examples</a>
+</p>
 
-**Current Status:** 🚧 **Alpha** - Core functionality complete, ML features planned for next phase.
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue" alt="Python">
+  <img src="https://img.shields.io/badge/coverage-92%25-brightgreen" alt="Coverage">
+  <img src="https://img.shields.io/badge/tests-114%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+</p>
+
+---
+
+DataWash analyzes your tabular data, detects quality issues, suggests prioritized fixes, and generates reproducible Python code — all in a few lines of code.
+
+```python
+from datawash import analyze
+
+report = analyze("messy_data.csv")
+print(f"Quality Score: {report.quality_score}/100")
+clean_df = report.apply_all()
+print(report.generate_code())
+```
+
+## Why DataWash?
+
+| Problem | DataWash Solution |
+|---------|-------------------|
+| Missing values silently break ML models | Automatic detection + smart filling strategies |
+| Inconsistent date formats cause parsing errors | Detects and standardizes to ISO format |
+| Duplicate rows inflate statistics | Identifies and removes exact duplicates |
+| Boolean values stored as "yes"/"no" strings | Converts to proper boolean type |
+| Manual data cleaning is tedious and error-prone | Generates reproducible Python code |
 
 ## Installation
 
@@ -12,272 +48,228 @@ DataWash analyzes tabular data, detects quality issues using rules and statistic
 pip install datawash
 ```
 
-Optional extras:
+**Optional extras:**
 
 ```bash
 pip install datawash[formats]  # Parquet + Excel support
-pip install datawash[ml]       # ML-powered detection (planned)
+pip install datawash[ml]       # ML-powered detection (coming soon)
 pip install datawash[all]      # All optional dependencies
 pip install datawash[dev]      # Development tools
 ```
 
 ## Quick Start
 
+### Python API
+
 ```python
 from datawash import analyze
 
-# Analyze your data
-report = analyze("data.csv")
+# 1. Analyze your data
+report = analyze("data.csv")  # or pass a DataFrame
 
-# View comprehensive analysis
-print(report.summary())               # Quality score + overview
+# 2. Check quality score
 print(f"Quality Score: {report.quality_score}/100")
+print(f"Issues Found: {len(report.issues)}")
 
-# Examine issues found
-for issue in report.issues:
-    print(f"[{issue.severity}] {issue.category}: {issue.description}")
-
-# See prioritized suggestions
+# 3. Review suggestions
 for s in report.suggestions:
-    print(f"[{s.id}] {s.action} -- {s.rationale}")
+    print(f"[{s.id}] {s.action}")
 
-# Apply all fixes automatically
+# 4. Apply all fixes
 clean_df = report.apply_all()
 
-# Or apply selectively by ID
-clean_df = report.apply([1, 3, 5])
+# 5. Or apply selectively
+clean_df = report.apply([1, 3, 5])  # by suggestion ID
 
-# Or review and apply interactively
-clean_df = report.apply_interactive()
-
-# Generate reproducible Python code
+# 6. Generate reproducible code
 print(report.generate_code())
 ```
 
-## CLI Usage
+### Command Line
 
 ```bash
-# Analyze a dataset and view quality report
+# Analyze and see quality report
 datawash analyze data.csv
 
-# Get cleaning suggestions prioritized by use case
+# Get prioritized suggestions
 datawash suggest data.csv --use-case ml
 
-# Clean and export with automatic fixes
+# Clean and export
 datawash clean data.csv -o clean.csv --apply-all
 
-# Apply specific suggestions by ID
-datawash clean data.csv -o clean.csv --ids 1,2,5
-
-# Generate reproducible Python code
-datawash codegen data.csv --apply-all --style function
+# Generate Python code
+datawash codegen data.csv --apply-all
 ```
 
 ## Features
 
-### ✅ Currently Implemented
+### Data Quality Detection
 
-#### Data Loading & Profiling
-- **Multi-format support**: CSV, JSON, Parquet, Excel
-- **Comprehensive profiling**: Column types, statistics, patterns, missing values
-- **Quality scoring**: 0-100 data quality score with detailed breakdown
+| Detector | What It Finds |
+|----------|---------------|
+| **Missing** | Null values, empty strings, whitespace-only values |
+| **Duplicates** | Exact duplicate rows |
+| **Formats** | Mixed case, inconsistent dates, whitespace padding |
+| **Outliers** | Statistical anomalies (IQR or Z-score) |
+| **Types** | Numbers/booleans stored as strings |
+| **Similarity** | Potentially duplicate columns |
 
-#### Quality Detection (6 Detectors)
-- **Missing values**: Nulls, empty strings, whitespace-only values
-- **Duplicates**: Exact duplicate row detection
-- **Format issues**: Mixed case, inconsistent date formats, leading/trailing whitespace
-- **Outliers**: IQR and Z-score based detection for numeric columns
-- **Type mismatches**: Numeric/boolean data stored as strings
-- **Similar columns**: String similarity detection (Levenshtein distance)
+### Smart Transformations
 
-#### Data Transformations (6 Transformers)
-- **Duplicates**: Remove exact duplicate rows
-- **Missing data**: Drop rows, fill with median/mode/custom value, clean empty strings (combined convert+fill)
-- **Type conversion**: Convert to numeric, boolean, datetime
-- **Format standardization**: Strip whitespace, standardize case (upper/lower/title), normalize dates
-- **Column operations**: Drop, rename, merge columns
-- **Category normalization**: Standardize categorical values
+| Transformer | Operations |
+|-------------|------------|
+| **Missing** | Drop rows, fill with median/mode/value, clean empty strings |
+| **Duplicates** | Remove exact duplicates |
+| **Types** | Convert to numeric, boolean, datetime |
+| **Formats** | Standardize case, dates, strip whitespace |
+| **Columns** | Drop, rename, merge columns |
+| **Categories** | Normalize categorical values |
 
-#### Intelligent Suggestion System
-- **Use-case aware**: Prioritization for ML, analytics, export, or general purposes
-- **Contextual rationale**: Each suggestion includes why it's recommended
-- **Selective application**: Apply all, specific IDs, or interactive review
-- **Conflict resolution**: Automatic exclusion of conflicting transformations (e.g., no case changes on boolean/date columns)
-- **Execution ordering**: Transformations applied in optimal order to prevent conflicts
+### Intelligent Suggestion System
 
-#### Code Generation
-- **Reproducible workflows**: Generate Python code from applied transformations
-- **Multiple styles**: Function wrapper or standalone script
-- **Tested output**: Generated code includes proper imports and error handling
+- **Conflict Resolution**: Automatically prevents conflicting transformations
+- **Execution Ordering**: Applies fixes in optimal order (6 phases)
+- **Use-Case Aware**: Priorities adjust for ML, analytics, or export workflows
+- **Contextual Rationale**: Every suggestion explains why it's recommended
 
-#### CLI & UX
-- **Rich terminal output**: Colored tables, progress bars, formatted reports
-- **Interactive mode**: Step-by-step review and application with prompts
-- **Jupyter support**: HTML representation in notebooks via `_repr_html_()`
-- **Cross-platform**: Works on Linux, macOS, Windows
+### Code Generation
 
-### 🚧 In Progress / Planned
+```python
+# Generate a reusable cleaning function
+code = report.generate_code(style="function")
 
-#### ML-Powered Features (Phase 4)
-- **Semantic similarity**: Column similarity using sentence transformers
-- **Fuzzy duplicate detection**: MinHash-based approximate matching
-- **ML type classification**: Advanced type inference using learned patterns
-- **Embedding-based clustering**: Group similar records
+# Or a standalone script
+code = report.generate_code(style="script")
+```
 
-#### Extended Detection
-- **Schema validation**: Validate against expected schemas
-- **Referential integrity**: Check foreign key relationships
-- **Business rules**: Custom validation rules
-- **PII detection**: Identify personally identifiable information
+## Examples
 
-#### Advanced Transformations
-- **Smart imputation**: KNN, MICE, or model-based missing value filling
-- **Encoding**: One-hot, target, ordinal encoding for ML
-- **Outlier handling**: More sophisticated outlier treatment strategies
-- **Feature engineering**: Automated feature generation suggestions
+We provide ready-to-run examples in the `examples/` directory:
 
-#### Performance & Scale
-- **Lazy evaluation**: Dask/Polars backend for large datasets
-- **Incremental processing**: Stream processing for files > memory
-- **Parallel execution**: Multi-core transformation application
-- **Caching**: Memoization of expensive operations
+| Example | Description |
+|---------|-------------|
+| [`quickstart.py`](examples/quickstart.py) | Basic workflow: analyze → suggest → apply → codegen |
+| [`csv_cleaning.py`](examples/csv_cleaning.py) | Load CSV, clean, save with CLI equivalents |
+| [`ml_preprocessing.py`](examples/ml_preprocessing.py) | ML-optimized cleaning workflow |
+| [`jupyter_demo.ipynb`](examples/jupyter_demo.ipynb) | Interactive notebook with visualizations |
 
-#### Integration & Deployment
-- **Pipeline export**: Export to Airflow, Prefect, or Dagster
-- **API server**: REST API for web integration
-- **Cloud connectors**: S3, BigQuery, Snowflake, etc.
-- **Monitoring**: Data quality monitoring over time
+**Sample datasets** in `examples/sample_data/`:
+- `customers_messy.csv` - Names, emails, phones with various issues
+- `orders_messy.csv` - Dates, amounts, categories with inconsistencies
+- `employees_messy.csv` - Mixed types, duplicates, outliers
+
+```bash
+# Run an example
+python examples/quickstart.py
+```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Getting Started](docs/getting-started.md) | Installation and first steps |
+| [User Guide](docs/user-guide.md) | Complete feature walkthrough |
+| [API Reference](docs/api-reference.md) | Detailed API documentation |
+| [CLI Reference](docs/cli-reference.md) | Command-line interface guide |
+| [Configuration](docs/configuration.md) | Customization options |
+| [Contributing](docs/contributing.md) | How to contribute |
+
+## Use Cases
+
+Choose a use case to get optimized suggestions:
+
+```python
+report = analyze(df, use_case="ml")  # or "general", "analytics", "export"
+```
+
+| Use Case | Prioritizes |
+|----------|-------------|
+| `general` | Balanced approach for exploration |
+| `ml` | Duplicates, missing values, type conversions |
+| `analytics` | Consistency, date formats, outliers |
+| `export` | Format standardization, clean values |
 
 ## Configuration
 
-DataWash is highly configurable. Customize detection thresholds, suggestion limits, and behavior:
-
 ```python
-from datawash import analyze
-
 report = analyze(
     "data.csv",
-    use_case="ml",  # Prioritize suggestions for ML workflows
+    use_case="ml",
     config={
         "detectors": {
-            "outlier_method": "zscore",      # or "iqr"
-            "outlier_threshold": 2.5,        # Z-score threshold
-            "min_similarity": 0.8,           # Column similarity threshold
+            "outlier_method": "zscore",  # or "iqr"
+            "outlier_threshold": 2.5,
+            "min_similarity": 0.8,
         },
         "suggestions": {
-            "max_suggestions": 20,           # Limit suggestion count
-        },
-        "profiling": {
-            "sample_rows": 10000,            # Sample for large datasets
+            "max_suggestions": 20,
         },
     },
 )
 ```
 
-### Use Cases
-
-Choose a use case to get prioritized suggestions:
-
-- **`general`**: Balanced approach for data exploration
-- **`ml`**: Prioritize numeric types, handle missing values, remove duplicates
-- **`analytics`**: Focus on consistency and format standardization
-- **`export`**: Prepare clean data for sharing/export
-
 ## Project Status
 
-### Statistics
-- **~2,600 lines** of source code
-- **~1,000 lines** of test code  
-- **114 tests** with **92% coverage**
-- **10 modules** fully implemented
-- **1 module** (ml) planned for Phase 4
+| Metric | Value |
+|--------|-------|
+| Source Code | ~2,900 lines |
+| Test Code | ~1,270 lines |
+| Tests | 114 passing |
+| Coverage | ~92% |
+| Python | 3.10, 3.11, 3.12 |
+| Platforms | Linux, macOS, Windows |
 
-### Test Coverage
-- ✅ Unit tests for all detectors
-- ✅ Unit tests for all transformers
-- ✅ Unit tests for profiler, adapters, CLI
-- ✅ Integration tests for end-to-end workflows
-- ✅ Edge case tests (empty data, single row, all nulls, etc.)
-- ✅ Code generation validation
+### What's Working
 
-### What Works Today
-1. Load data from CSV, JSON, Parquet, Excel
-2. Profile dataset with comprehensive statistics
-3. Detect 6 types of data quality issues
-4. Generate prioritized, actionable suggestions
-5. Apply transformations automatically or selectively
-6. Generate reproducible Python code
-7. Use via Python API or CLI
-8. Rich terminal output with progress indicators
+- ✅ Multi-format loading (CSV, JSON, Parquet, Excel)
+- ✅ Comprehensive profiling and statistics
+- ✅ 6 detectors for common data quality issues
+- ✅ 6 transformers with multiple operations each
+- ✅ Smart suggestion system with conflict resolution
+- ✅ Reproducible Python code generation
+- ✅ Rich CLI with colored output
+- ✅ Jupyter notebook support
 
 ### What's Next
-1. **ML-powered detection** (sentence-transformers, datasketch)
-2. **Advanced imputation** strategies
-3. **Performance optimizations** for large datasets
-4. **Cloud integrations** (S3, BigQuery, etc.)
-5. **Pipeline export** to orchestration tools
+
+- 🚧 ML-powered semantic similarity detection
+- 🚧 Fuzzy duplicate detection with MinHash
+- 🚧 Advanced imputation (KNN, MICE)
+- 🚧 Performance optimization for large datasets
+- 🚧 Cloud storage connectors (S3, BigQuery)
 
 ## Requirements
 
 - **Python** >= 3.10
-- **Core dependencies**: pandas, numpy, pydantic, rich, typer, scikit-learn, python-Levenshtein
-- **Optional**: pyarrow (Parquet), openpyxl (Excel), sentence-transformers (ML), datasketch (ML)
+- **Core**: pandas, numpy, pydantic, rich, typer, scikit-learn
+- **Optional**: pyarrow (Parquet), openpyxl (Excel)
 
 ## Development
 
 ```bash
-# Clone the repository
+# Clone and install
 git clone https://github.com/Pranav1011/DataWash.git
 cd DataWash
-
-# Install with dev dependencies
 pip install -e ".[dev,all]"
 
 # Run tests
 pytest
 
-# Run tests with coverage
-pytest --cov=datawash --cov-report=html
-
 # Format code
 black src tests
 ruff check src tests
-
-# Type checking
-mypy src
 ```
 
 ## Contributing
 
-Contributions are welcome! Areas where help is needed:
+Contributions welcome! See [CONTRIBUTING.md](docs/contributing.md) for guidelines.
 
-1. **ML module implementation** - sentence-transformers integration for semantic similarity
-2. **Additional detectors** - PII detection, schema validation, business rules
-3. **Performance optimization** - Dask/Polars backends for large datasets
-4. **Documentation** - Examples, tutorials, API docs
-5. **Cloud connectors** - S3, BigQuery, Snowflake adapters
-
-Please open an issue to discuss before starting work on major features.
-
-## Roadmap
-
-### Version 0.2.0 (Q2 2026)
-- [ ] ML module with sentence-transformers integration
-- [ ] Fuzzy duplicate detection with MinHash
-- [ ] Advanced imputation strategies (KNN, MICE)
-- [ ] Performance benchmarks and optimization
-
-### Version 0.3.0 (Q3 2026)
-- [ ] Dask backend for large datasets
-- [ ] Cloud storage connectors
-- [ ] Pipeline export (Airflow, Prefect)
-- [ ] Web API server
-
-### Version 1.0.0 (Q4 2026)
-- [ ] Production-ready with comprehensive testing
-- [ ] Complete documentation and examples
-- [ ] Performance guarantees
-- [ ] Stable API
+**Areas where help is needed:**
+- ML module implementation (sentence-transformers)
+- Additional detectors (PII, schema validation)
+- Performance optimization
+- Documentation and examples
+- Cloud connectors
 
 ## License
 
@@ -285,9 +277,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-Built with:
-- [pandas](https://pandas.pydata.org/) - Data manipulation
-- [pydantic](https://pydantic-docs.helpmanual.io/) - Data validation
-- [rich](https://rich.readthedocs.io/) - Terminal formatting
-- [typer](https://typer.tiangolo.com/) - CLI framework
-- [scikit-learn](https://scikit-learn.org/) - Statistical methods
+Built with [pandas](https://pandas.pydata.org/), [pydantic](https://pydantic-docs.helpmanual.io/), [rich](https://rich.readthedocs.io/), [typer](https://typer.tiangolo.com/), and [scikit-learn](https://scikit-learn.org/).

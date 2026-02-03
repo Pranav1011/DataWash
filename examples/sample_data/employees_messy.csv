@@ -1,0 +1,41 @@
+employee_id,full_name,department,job_title,hire_date,salary,performance_score,is_manager,years_experience
+E001,John Smith,Engineering,Software Engineer,2020-03-15,85000,88,no,5
+E002,JANE DOE,  engineering  ,Senior Developer,15/03/2020,95000,92,Yes,8
+E003,bob wilson,ENGINEERING,Junior Developer,2020-04-01,65000,75,NO,2
+E004,Alice Johnson,Marketing,Marketing Manager,April 10, 2020,78000,85,yes,6
+E005,  Charlie Brown  ,marketing,Content Writer,2020/05/20,55000,78,No,3
+E006,Diana Miller,MARKETING,SEO Specialist,20-May-2020,62000,82,false,4
+E007,Edward Davis,Sales,Sales Representative,2020-06-01,52000,90,FALSE,2
+E008,FIONA GARCIA,  sales  ,Account Manager,June 15, 2020,72000,88,True,5
+E009,george martinez,Sales,Sales Director,2020/07/01,110000,95,TRUE,12
+E010,Hannah Lee,HR,HR Coordinator,01-Jul-2020,48000,80,no,1
+E011,Ivan Taylor,hr,Recruiter,2020-08-15,52000,76,No,2
+E012,Julia Thomas,  HR  ,HR Manager,August 20, 2020,85000,89,yes,7
+E013,Kevin White,Finance,Financial Analyst,2020/09/01,70000,84,NO,4
+E014,LAURA HARRIS,finance,Senior Accountant,01-Sep-2020,82000,87,Yes,6
+E015,Michael Clark,FINANCE,CFO,2020-10-15,250000,96,yes,15
+E016,Nancy Robinson,Engineering,DevOps Engineer,October 20, 2020,92000,91,no,5
+E017,Oscar Thompson,  engineering  ,Data Scientist,2020/11/01,98000,93,No,4
+E018,Patricia Lewis,Engineering,QA Engineer,01-Nov-2020,68000,79,false,3
+E019,Quinn Walker,Marketing,Brand Manager,2020-12-15,75000,86,FALSE,5
+E020,Rachel Hall,  marketing  ,Social Media Specialist,December 20, 2020,58000,81,True,2
+E021,Samuel King,Sales,Business Development,2021/01/05,65000,88,TRUE,3
+E022,Tina Allen,sales,Inside Sales,05-Jan-2021,48000,77,no,1
+E023,ULYSSES YOUNG,  Sales  ,Regional Manager,2021-02-15,95000,92,yes,8
+E024,Victoria Green,HR,Training Coordinator,February 20, 2021,55000,83,No,2
+E025,William Baker,hr,Benefits Administrator,2021/03/01,52000,78,NO,2
+E026,John Smith,Engineering,Software Engineer,2020-03-15,85000,88,no,5
+E027,JANE DOE,  engineering  ,Senior Developer,15/03/2020,95000,92,Yes,8
+E028,Xena Adams,Finance,Tax Specialist,01-Mar-2021,72000,85,false,4
+E029,Yolanda Nelson,  finance  ,Payroll Manager,2021-04-15,68000,82,FALSE,3
+E030,Zachary Hill,FINANCE,Internal Auditor,April 20, 2021,75000,87,True,5
+E031,Amy Carter,Engineering,Principal Engineer,2021/05/01,145000,97,TRUE,10
+E032,BRIAN MITCHELL,  engineering  ,Tech Lead,01-May-2021,125000,94,yes,8
+E033,cynthia perez,Marketing,VP Marketing,2021-06-15,180000,96,yes,12
+E034,Derek Roberts,sales,VP Sales,June 20, 2021,195000,98,Yes,14
+E035,Elena Turner,HR,CHRO,2021/07/01,210000,97,YES,16
+E036,Frank Phillips,  finance  ,Controller,01-Jul-2021,135000,93,True,9
+E037,Grace Campbell,Engineering,Intern,2021-08-15,35000,70,no,0
+E038,Henry Parker,Marketing,Intern,August 20, 2021,32000,68,No,0
+E039,Iris Evans,Sales,Trainee,2021/09/01,38000,72,NO,0
+E040,Jack Edwards,HR,Intern,01-Sep-2021,33000,65,false,0

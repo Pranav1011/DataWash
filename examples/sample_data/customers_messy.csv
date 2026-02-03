@@ -1,0 +1,31 @@
+customer_id,first_name,last_name,email,phone,signup_date,is_active,lifetime_value
+1,John,Smith,john.smith@email.com,555-123-4567,2023-01-15,yes,1250.00
+2,JANE,DOE,jane.doe@email.com,(555) 234-5678,15/02/2023,Yes,890.50
+3,bob,Johnson,,555.345.6789,2023-03-20,YES,2100.00
+4,Alice,  Williams  ,alice.williams@email.com,555-456-7890,March 25, 2023,no,450.00
+5,  Charlie  ,Brown,charlie.brown@email.com,,2023/04/10,No,1800.75
+6,DIANA,Miller,diana.miller@email.com,5555678901,2023-05-05,true,3200.00
+7,Edward,Davis,edward.davis@email.com,555-678-9012,05-Jun-2023,TRUE,920.00
+8,fiona,Garcia,  fiona.garcia@email.com  ,(555)789-0123,2023-07-15,false,1650.25
+9,George,Martinez,george.martinez@email.com,555 890 1234,July 20, 2023,FALSE,2800.00
+10,Hannah,Anderson,,555-901-2345,2023/08/25,1,4100.50
+11,Ivan,Taylor,ivan.taylor@email.com,555-012-3456,2023-09-01,0,780.00
+12,JULIA,Thomas,julia.thomas@email.com,,30-Sep-2023,yes,1920.00
+13,Kevin,Jackson,kevin.jackson@email.com,5551234567,2023-10-15,Yes,2350.00
+14,laura,White,laura.white@email.com,(555) 234 5678,Oct 20, 2023,YES,1100.00
+15,Michael,Harris,michael.harris@email.com,555-345-6789,2023/11/05,no,3800.25
+16,Nancy,Martin,,555.456.7890,2023-11-20,No,650.00
+17,Oscar,Thompson,oscar.thompson@email.com,555-567-8901,November 25, 2023,true,2200.00
+18,Patricia,Garcia,patricia.garcia@email.com,,2023-12-01,TRUE,1450.75
+19,QUINN,Robinson,quinn.robinson@email.com,5556789012,01-Dec-2023,false,990.00
+20,rachel,Clark,rachel.clark@email.com,(555)789-0123,2023/12/15,FALSE,2750.00
+21,Samuel,Rodriguez,samuel.rodriguez@email.com,555 890 1234,Dec 20, 2023,yes,1850.50
+22,tina,Lewis,  tina.lewis@email.com  ,555-901-2345,2023-12-25,Yes,3100.00
+23,Ulysses,Lee,,555-012-3456,25/12/2023,YES,420.00
+24,Victoria,Walker,victoria.walker@email.com,5551234567,2024-01-05,no,2650.75
+25,William,Hall,william.hall@email.com,(555) 234-5678,January 10, 2024,No,1200.00
+26,John,Smith,john.smith@email.com,555-123-4567,2023-01-15,yes,1250.00
+27,JANE,DOE,jane.doe@email.com,(555) 234-5678,15/02/2023,Yes,890.50
+28,Xena,Allen,xena.allen@email.com,555.345.6789,2024/01/20,true,1980.00
+29,Yolanda,Young,,555-456-7890,Jan 25, 2024,TRUE,2400.25
+30,Zachary,King,zachary.king@email.com,(555)567-8901,2024-02-01,false,3500.00
