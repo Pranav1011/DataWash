@@ -37,6 +37,8 @@ class DatasetProfile(BaseModel):
     memory_bytes: int
     columns: dict[str, ColumnProfile] = Field(default_factory=dict)
     duplicate_row_count: int = 0
+    sampled: bool = False
+    sample_size: Optional[int] = None
 
 
 class Finding(BaseModel):

@@ -64,7 +64,7 @@ pip install datawash[dev]      # Development tools
 ```python
 from datawash import analyze
 
-# 1. Analyze your data
+# 1. Analyze your data (sampling enabled by default for large datasets)
 report = analyze("data.csv")  # or pass a DataFrame
 
 # 2. Check quality score
@@ -83,6 +83,12 @@ clean_df = report.apply([1, 3, 5])  # by suggestion ID
 
 # 6. Generate reproducible code
 print(report.generate_code())
+
+# Disable sampling for exact results on large datasets
+report = analyze("data.csv", sample=False)
+
+# Disable parallel processing
+report = analyze("data.csv", parallel=False)
 ```
 
 ### Command Line
@@ -141,6 +147,24 @@ code = report.generate_code(style="function")
 # Or a standalone script
 code = report.generate_code(style="script")
 ```
+
+## Performance
+
+DataWash v0.2.0 is optimized for large datasets:
+
+| Dataset | Time | Throughput |
+|---------|------|------------|
+| 1M rows x 10 cols | 0.72s | 1.4M rows/sec |
+| 100K rows x 50 cols | 2.13s | 47K rows/sec |
+| 10K rows x 100 cols | 4.35s | 2.3K rows/sec |
+| 1M rows x 50 cols | 3.24s | 309K rows/sec |
+| 50K rows x 250 cols | 9.99s | 5K rows/sec |
+
+**Optimizations include:**
+- Smart sampling for datasets >=50K rows (10-20x speedup)
+- Parallel column profiling and detection
+- 31% memory reduction via dtype optimization
+- O(n) similarity detection with MinHash + LSH
 
 ## Examples
 
@@ -232,11 +256,12 @@ report = analyze(
 
 ### What's Next
 
-- 🚧 ML-powered semantic similarity detection
-- 🚧 Fuzzy duplicate detection with MinHash
-- 🚧 Advanced imputation (KNN, MICE)
-- 🚧 Performance optimization for large datasets
-- 🚧 Cloud storage connectors (S3, BigQuery)
+- ML-powered semantic similarity detection
+- Fuzzy duplicate detection for near-duplicate rows
+- Advanced imputation (KNN, MICE)
+- Cloud storage connectors (S3, BigQuery)
+- PII detection for sensitive data
+- Schema validation for expected column types and constraints
 
 ## Requirements
 

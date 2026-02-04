@@ -12,7 +12,9 @@ from rich.table import Table
 
 from datawash.adapters import load_dataframe
 from datawash.codegen import generate_code as _generate_code
+from datawash.core.cache import ComputationCache
 from datawash.core.config import Config
+from datawash.core.dtypes import optimize_dataframe
 from datawash.core.models import (
     DatasetProfile,
     Finding,
@@ -20,13 +22,22 @@ from datawash.core.models import (
     Suggestion,
     TransformationResult,
 )
+from datawash.core.sampling import SmartSampler
 from datawash.detectors import run_all_detectors
+from datawash.detectors.registry import get_all_detectors
 from datawash.profiler import profile_dataset
+from datawash.profiler.parallel import (
+    profile_dataset_parallel,
+    run_detectors_parallel,
+)
 from datawash.suggestors import generate_suggestions
 from datawash.suggestors.engine import _sort_by_execution_order
 from datawash.transformers import run_transformer
 
 logger = logging.getLogger(__name__)
+
+# Threshold below which parallel overhead isn't worth it
+_PARALLEL_THRESHOLD = 5000
 
 
 class Report:
@@ -36,6 +47,8 @@ class Report:
         data: A DataFrame or path to a data file.
         config: Optional configuration. Uses defaults if None.
         use_case: Context for suggestion prioritization.
+        sample: Enable smart sampling for large datasets (default True).
+        parallel: Enable parallel profiling and detection (default True).
     """
 
     def __init__(
@@ -43,6 +56,8 @@ class Report:
         data: pd.DataFrame | str | Path,
         config: Optional[Config | dict[str, Any]] = None,
         use_case: str = "general",
+        sample: bool = True,
+        parallel: bool = True,
     ) -> None:
         # Resolve config
         if config is None:
@@ -61,13 +76,59 @@ class Report:
             self._df = data
             self._source_path = None
 
-        # Run analysis
-        self._profile = profile_dataset(self._df)
-        self._findings = run_all_detectors(
-            self._df,
-            self._profile,
-            enabled=self._config.detectors.enabled,
+        # Optimize dtypes for faster analysis
+        try:
+            optimized_df = optimize_dataframe(self._df)
+        except Exception:
+            logger.debug("Dtype optimization skipped", exc_info=True)
+            optimized_df = self._df
+
+        # Smart sampling for large datasets
+        self._sampler: SmartSampler | None = None
+        if sample and len(optimized_df) >= 50_000:
+            self._sampler = SmartSampler(optimized_df)
+            analysis_df = self._sampler.sample_df
+        else:
+            analysis_df = optimized_df
+
+        # Decide whether to use parallel execution
+        use_parallel = parallel and (
+            len(analysis_df) > _PARALLEL_THRESHOLD or len(analysis_df.columns) > 20
         )
+
+        # Profile and detect
+        if use_parallel:
+            cache = ComputationCache(analysis_df)
+            self._profile = profile_dataset_parallel(analysis_df, cache=cache)
+            active = {
+                n: d
+                for n, d in get_all_detectors().items()
+                if self._config.detectors.enabled is None
+                or n in self._config.detectors.enabled
+            }
+            self._findings = run_detectors_parallel(analysis_df, self._profile, active)
+        else:
+            self._profile = profile_dataset(analysis_df)
+            self._findings = run_all_detectors(
+                analysis_df,
+                self._profile,
+                enabled=self._config.detectors.enabled,
+            )
+
+        # Restore original row/column counts in profile when sampled
+        if self._sampler and self._sampler.is_sampled:
+            self._profile = DatasetProfile(
+                row_count=len(self._df),
+                column_count=len(self._df.columns),
+                memory_bytes=int(self._df.memory_usage(deep=True).sum()),
+                columns=self._profile.columns,
+                duplicate_row_count=self._sampler.extrapolate_count(
+                    self._profile.duplicate_row_count
+                ),
+                sampled=True,
+                sample_size=len(self._sampler.sample_df),
+            )
+
         self._suggestions = generate_suggestions(
             self._findings,
             max_suggestions=self._config.suggestions.max_suggestions,
@@ -347,6 +408,8 @@ def analyze(
     data: pd.DataFrame | str | Path,
     config: Optional[Config | dict[str, Any]] = None,
     use_case: str = "general",
+    sample: bool = True,
+    parallel: bool = True,
 ) -> Report:
     """Analyze a dataset and return a Report.
 
@@ -356,8 +419,12 @@ def analyze(
         data: DataFrame or path to a data file.
         config: Optional configuration dict or Config object.
         use_case: One of "general", "ml", "analytics", "export".
+        sample: Enable smart sampling for large datasets.
+        parallel: Enable parallel profiling and detection.
 
     Returns:
         A Report object with issues, suggestions, and cleaning methods.
     """
-    return Report(data, config=config, use_case=use_case)
+    return Report(
+        data, config=config, use_case=use_case, sample=sample, parallel=parallel
+    )

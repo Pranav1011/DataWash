@@ -1,0 +1,13 @@
+id,name,email,age,salary,department,is_active,hire_date,phone
+1,John Smith,john@email.com,28,50000,Engineering,yes,2023-01-15,555-1234
+2,JANE DOE,jane@email.com,34,62000,engineering,Yes,15/02/2023,555-5678
+3,bob wilson,,45,58000,ENGINEERING,YES,March 10 2023,555-9012
+4,  Alice Johnson  ,alice@email.com,29,150000,Sales,no,2023-04-20,555-3456
+5,Charlie Brown,charlie@email.com,38,55000,sales,No,2023/05/25,555-7890
+6,John Smith,john@email.com,28,50000,Engineering,yes,2023-01-15,555-1234
+7,Diana Prince,diana@email.com,invalid,72000,Marketing,true,2023-06-01,555-2345
+8,Edward Norton,edward@email.com,42,,HR,false,2023-07-15,
+9,Fiona Apple,fiona@email.com,31,48000,Engineering,TRUE,2023-08-20,555-6789
+10,George Lucas,george@email.com,55,95000,Executive,FALSE,2023-09-01,555-0123
+11,Hannah Montana,   ,26,44000,Sales,yes,2023-10-10,555-4567
+12,Ivan Drago,ivan@email.com,39,67000,engineering,Yes,2023-11-15,555-8901

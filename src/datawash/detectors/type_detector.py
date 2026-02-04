@@ -29,8 +29,13 @@ class TypeDetector(BaseDetector):
                 series = df[col_name].dropna()
                 if series.empty:
                     continue
-                numeric_count = pd.to_numeric(series, errors="coerce").notna().sum()
-                ratio = numeric_count / len(series)
+                # Sample for large columns to avoid expensive pd.to_numeric
+                if len(series) > 1000:
+                    sample = series.sample(1000, random_state=42)
+                else:
+                    sample = series
+                numeric_count = pd.to_numeric(sample, errors="coerce").notna().sum()
+                ratio = numeric_count / len(sample)
                 if ratio > 0.8:
                     findings.append(
                         Finding(

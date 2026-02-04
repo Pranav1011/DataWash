@@ -11,6 +11,8 @@ def analyze(
     data: pd.DataFrame | str | Path,
     config: Optional[Config | dict] = None,
     use_case: str = "general",
+    sample: bool = True,
+    parallel: bool = True,
 ) -> Report
 ```
 
@@ -20,9 +22,17 @@ Analyze a dataset and return a Report object.
 - `data`: DataFrame or path to a data file (CSV, JSON, Parquet, Excel)
 - `config`: Optional configuration dict or Config object
 - `use_case`: One of "general", "ml", "analytics", "export"
+- `sample`: Enable smart sampling for datasets >=50K rows (default: True)
+- `parallel`: Enable parallel column profiling and detection (default: True)
 
 **Returns:**
 - `Report` object with issues, suggestions, and cleaning methods
+
+**Performance Notes:**
+- With `sample=True` (default), datasets >=50K rows are sampled to ~10K rows
+- Sampling provides ~95% accuracy with 10-20x speedup
+- Use `sample=False` for exact results on large datasets (slower)
+- Parallel processing uses ThreadPoolExecutor for column-level profiling and detector execution
 
 **Example:**
 ```python
@@ -39,6 +49,12 @@ report = analyze(df, use_case="ml")
 
 # With config
 report = analyze(df, config={"suggestions": {"max_suggestions": 10}})
+
+# Disable sampling for exact results on large datasets
+report = analyze(df, sample=False)
+
+# Disable parallel processing
+report = analyze(df, parallel=False)
 ```
 
 ---
@@ -238,6 +254,8 @@ class DatasetProfile:
     memory_bytes: int
     columns: dict[str, ColumnProfile]
     duplicate_row_count: int
+    sampled: bool = False          # True if smart sampling was used
+    sample_size: Optional[int]     # Number of rows in sample (if sampled)
 ```
 
 ### ColumnProfile

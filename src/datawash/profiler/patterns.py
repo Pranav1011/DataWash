@@ -15,7 +15,7 @@ PATTERNS: dict[str, re.Pattern[str]] = {
     "uuid": re.compile(
         r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
     ),
-    "currency": re.compile(r"^[$\u20ac\u00a3\u00a5][\s]?[\d,]+\.?\d*$"),
+    "currency": re.compile("^[$\u20ac\u00a3\u00a5][\\s]?[\\d,]+\\.?\\d*$"),
     "zip_us": re.compile(r"^\d{5}(-\d{4})?$"),
 }
 
