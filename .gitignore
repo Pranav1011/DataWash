@@ -53,7 +53,7 @@ dmypy.json
 # Environment variables
 .env
 .env.local
-
+.pypirc
 # Logs
 *.log
 

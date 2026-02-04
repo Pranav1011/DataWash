@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.2] - 2026-02-04
+
+### Fixed
+- Fixed ruff E721 lint error: use `is` instead of `==` for type comparison in `MissingTransformer`
+
+## [0.2.1] - 2026-02-04
+
+### Fixed
+- Fixed broken documentation links on PyPI (relative → absolute GitHub URLs)
+
 ## [0.2.0] - 2026-02-04
 
 ### Added

@@ -67,7 +67,7 @@ class MissingTransformer(BaseTransformer):
                 # Convert empty and whitespace-only strings to NaN
                 # Handle both 'object' and string dtypes
                 col_dtype = result_df[col].dtype
-                is_string_like = col_dtype == object or pd.api.types.is_string_dtype(
+                is_string_like = col_dtype is object or pd.api.types.is_string_dtype(
                     col_dtype
                 )
                 if is_string_like:
