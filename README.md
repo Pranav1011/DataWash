@@ -172,10 +172,10 @@ We provide ready-to-run examples in the `examples/` directory:
 
 | Example | Description |
 |---------|-------------|
-| [`quickstart.py`](examples/quickstart.py) | Basic workflow: analyze → suggest → apply → codegen |
-| [`csv_cleaning.py`](examples/csv_cleaning.py) | Load CSV, clean, save with CLI equivalents |
-| [`ml_preprocessing.py`](examples/ml_preprocessing.py) | ML-optimized cleaning workflow |
-| [`jupyter_demo.ipynb`](examples/jupyter_demo.ipynb) | Interactive notebook with visualizations |
+| [`quickstart.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/quickstart.py) | Basic workflow: analyze → suggest → apply → codegen |
+| [`csv_cleaning.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/csv_cleaning.py) | Load CSV, clean, save with CLI equivalents |
+| [`ml_preprocessing.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/ml_preprocessing.py) | ML-optimized cleaning workflow |
+| [`jupyter_demo.ipynb`](https://github.com/Pranav1011/DataWash/blob/main/examples/jupyter_demo.ipynb) | Interactive notebook with visualizations |
 
 **Sample datasets** in `examples/sample_data/`:
 - `customers_messy.csv` - Names, emails, phones with various issues
@@ -191,12 +191,12 @@ python examples/quickstart.py
 
 | Document | Description |
 |----------|-------------|
-| [Getting Started](docs/getting-started.md) | Installation and first steps |
-| [User Guide](docs/user-guide.md) | Complete feature walkthrough |
-| [API Reference](docs/api-reference.md) | Detailed API documentation |
-| [CLI Reference](docs/cli-reference.md) | Command-line interface guide |
-| [Configuration](docs/configuration.md) | Customization options |
-| [Contributing](docs/contributing.md) | How to contribute |
+| [Getting Started](https://github.com/Pranav1011/DataWash/blob/main/docs/getting-started.md) | Installation and first steps |
+| [User Guide](https://github.com/Pranav1011/DataWash/blob/main/docs/user-guide.md) | Complete feature walkthrough |
+| [API Reference](https://github.com/Pranav1011/DataWash/blob/main/docs/api-reference.md) | Detailed API documentation |
+| [CLI Reference](https://github.com/Pranav1011/DataWash/blob/main/docs/cli-reference.md) | Command-line interface guide |
+| [Configuration](https://github.com/Pranav1011/DataWash/blob/main/docs/configuration.md) | Customization options |
+| [Contributing](https://github.com/Pranav1011/DataWash/blob/main/docs/contributing.md) | How to contribute |
 
 ## Use Cases
 
@@ -287,7 +287,7 @@ ruff check src tests
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](docs/contributing.md) for guidelines.
+Contributions welcome! See [CONTRIBUTING.md](https://github.com/Pranav1011/DataWash/blob/main/docs/contributing.md) for guidelines.
 
 **Areas where help is needed:**
 - ML module implementation (sentence-transformers)
@@ -298,7 +298,7 @@ Contributions welcome! See [CONTRIBUTING.md](docs/contributing.md) for guideline
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](https://github.com/Pranav1011/DataWash/blob/main/LICENSE) for details.
 
 ## Acknowledgments
 
