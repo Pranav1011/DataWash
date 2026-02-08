@@ -25,7 +25,11 @@ def analyze(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
 ) -> None:
     """Analyze a dataset and show quality report."""
-    from datawash.cli.formatters import format_issues, format_profile, format_suggestions
+    from datawash.cli.formatters import (
+        format_issues,
+        format_profile,
+        format_suggestions,
+    )
     from datawash.core.report import Report
 
     with console.status("Analyzing..."):

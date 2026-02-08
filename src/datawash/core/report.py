@@ -15,7 +15,13 @@ from datawash.codegen import generate_code as _generate_code
 from datawash.core.cache import ComputationCache
 from datawash.core.config import Config
 from datawash.core.dtypes import optimize_dataframe
-from datawash.core.models import DatasetProfile, Finding, Severity, Suggestion, TransformationResult
+from datawash.core.models import (
+    DatasetProfile,
+    Finding,
+    Severity,
+    Suggestion,
+    TransformationResult,
+)
 from datawash.core.sampling import SmartSampler
 from datawash.detectors import run_all_detectors
 from datawash.detectors.registry import get_all_detectors
