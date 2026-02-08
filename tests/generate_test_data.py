@@ -43,13 +43,38 @@ def generate_large_dataset(n_rows: int, seed: int = 42) -> pd.DataFrame:
 
     # First names and last names for realistic data
     first_names = [
-        "James", "Mary", "John", "Patricia", "Robert", "Jennifer",
-        "Michael", "Linda", "William", "Elizabeth", "David", "Barbara",
-        "Richard", "Susan", "Joseph", "Jessica", "Thomas", "Sarah",
+        "James",
+        "Mary",
+        "John",
+        "Patricia",
+        "Robert",
+        "Jennifer",
+        "Michael",
+        "Linda",
+        "William",
+        "Elizabeth",
+        "David",
+        "Barbara",
+        "Richard",
+        "Susan",
+        "Joseph",
+        "Jessica",
+        "Thomas",
+        "Sarah",
     ]
     last_names = [
-        "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia",
-        "Miller", "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez",
+        "Smith",
+        "Johnson",
+        "Williams",
+        "Brown",
+        "Jones",
+        "Garcia",
+        "Miller",
+        "Davis",
+        "Rodriguez",
+        "Martinez",
+        "Hernandez",
+        "Lopez",
     ]
     departments = ["Engineering", "Sales", "Marketing", "HR", "Finance", "Operations"]
     statuses = ["active", "inactive", "pending", "suspended"]
@@ -66,7 +91,20 @@ def generate_large_dataset(n_rows: int, seed: int = 42) -> pd.DataFrame:
         "department": [random.choice(departments) for _ in range(n_rows)],
         "hire_date": [random_date() for _ in range(n_rows)],
         "is_active": [
-            random.choice(["yes", "no", "Yes", "No", "YES", "NO", "true", "false", "True", "False"])
+            random.choice(
+                [
+                    "yes",
+                    "no",
+                    "Yes",
+                    "No",
+                    "YES",
+                    "NO",
+                    "true",
+                    "false",
+                    "True",
+                    "False",
+                ]
+            )
             for _ in range(n_rows)
         ],
         "status": [random.choice(statuses) for _ in range(n_rows)],
@@ -90,9 +128,11 @@ def generate_large_dataset(n_rows: int, seed: int = 42) -> pd.DataFrame:
     for col in ["first_name", "last_name", "department", "status"]:
         mask = np.random.random(n_rows) < 0.3
         df.loc[mask, col] = df.loc[mask, col].apply(
-            lambda x: random.choice([x.upper(), x.lower(), x.title()])
-            if isinstance(x, str)
-            else x
+            lambda x: (
+                random.choice([x.upper(), x.lower(), x.title()])
+                if isinstance(x, str)
+                else x
+            )
         )
 
     # 2. Add whitespace padding randomly
@@ -119,7 +159,9 @@ def generate_large_dataset(n_rows: int, seed: int = 42) -> pd.DataFrame:
 
     # 6. Add outliers to numeric columns
     outlier_indices = np.random.choice(n_rows, size=int(n_rows * 0.02), replace=False)
-    df.loc[outlier_indices, "salary"] = df.loc[outlier_indices, "salary"] * random.uniform(5, 10)
+    df.loc[outlier_indices, "salary"] = df.loc[
+        outlier_indices, "salary"
+    ] * random.uniform(5, 10)
 
     outlier_indices = np.random.choice(n_rows, size=int(n_rows * 0.01), replace=False)
     df.loc[outlier_indices, "score"] = random.uniform(500, 1000)

@@ -16,6 +16,7 @@ class DetectorConfig(BaseModel):
             "formats",
             "outliers",
             "similarity",
+            "pii",
         ]
     )
     similarity_name_threshold: float = 0.8

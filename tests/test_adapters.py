@@ -1,9 +1,12 @@
 """Tests for data adapters."""
 
 from __future__ import annotations
+
 from pathlib import Path
+
 import pandas as pd
 import pytest
+
 from datawash.adapters import load_dataframe
 from datawash.core.exceptions import AdapterError
 

@@ -30,7 +30,6 @@ from datawash.core.cache import ComputationCache
 from datawash.core.dtypes import optimize_dataframe
 from datawash.core.sampling import SAMPLE_THRESHOLD, SmartSampler
 
-
 # ═══════════════════════════════════════════════════════════════════════
 # TEST DATA GENERATORS
 # ═══════════════════════════════════════════════════════════════════════
@@ -241,8 +240,12 @@ def test_sampling_accuracy():
     print_result(
         "Sampled analysis is faster",
         passed,
-        f"sampled: {t_sampled:.2f}s, full: {t_full:.2f}s "
-        f"({t_full / t_sampled:.1f}x speedup)" if t_sampled > 0 else "",
+        (
+            f"sampled: {t_sampled:.2f}s, full: {t_full:.2f}s "
+            f"({t_full / t_sampled:.1f}x speedup)"
+            if t_sampled > 0
+            else ""
+        ),
     )
     all_passed &= passed
 
@@ -284,14 +287,10 @@ def test_parallel_processing():
 
     # Parallel profiler should import and function
     try:
-        from datawash.profiler.parallel import (
-            profile_dataset_parallel,
-            run_detectors_parallel,
-        )
+        from datawash.profiler.parallel import (profile_dataset_parallel,
+                                                run_detectors_parallel)
 
-        passed = callable(profile_dataset_parallel) and callable(
-            run_detectors_parallel
-        )
+        passed = callable(profile_dataset_parallel) and callable(run_detectors_parallel)
     except ImportError:
         passed = False
     print_result("Parallel modules importable", passed)
@@ -565,24 +564,16 @@ def test_full_benchmark():
         del df
 
     # Summary table
-    print(
-        "\n    +-----------------------+--------+--------+--------+---------+"
-    )
-    print(
-        "    | Scenario              | Target | Actual | Issues | Sampled |"
-    )
-    print(
-        "    +-----------------------+--------+--------+--------+---------+"
-    )
+    print("\n    +-----------------------+--------+--------+--------+---------+")
+    print("    | Scenario              | Target | Actual | Issues | Sampled |")
+    print("    +-----------------------+--------+--------+--------+---------+")
     for r in rows:
         marker = _green("*") if r["passed"] else _red("!")
         print(
             f"    | {r['desc']:<21} | <{r['target']:<4}s | "
             f"{r['actual']:>5.2f}s | {r['issues']:>6} | {r['sampled']:>7} | {marker}"
         )
-    print(
-        "    +-----------------------+--------+--------+--------+---------+"
-    )
+    print("    +-----------------------+--------+--------+--------+---------+")
 
     return all_passed
 
@@ -738,8 +729,10 @@ def main():
     print("\n" + "=" * 70)
     print("  DATAWASH V1.0 PERFORMANCE VALIDATION SUITE")
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  Python {sys.version.split()[0]}, pandas {pd.__version__}, "
-          f"numpy {np.__version__}")
+    print(
+        f"  Python {sys.version.split()[0]}, pandas {pd.__version__}, "
+        f"numpy {np.__version__}"
+    )
     print("=" * 70)
 
     tests = [

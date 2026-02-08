@@ -7,7 +7,8 @@ from datawash.core.cache import ComputationCache
 from datawash.core.models import DatasetProfile
 from datawash.detectors.registry import get_all_detectors
 from datawash.profiler.engine import profile_dataset
-from datawash.profiler.parallel import profile_dataset_parallel, run_detectors_parallel
+from datawash.profiler.parallel import (profile_dataset_parallel,
+                                        run_detectors_parallel)
 
 
 @pytest.fixture

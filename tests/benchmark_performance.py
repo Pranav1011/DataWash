@@ -78,7 +78,9 @@ def measure_performance(df: pd.DataFrame, name: str, use_case: str = "general"):
 
         print(f"  Time: {apply_time:.2f}s")
         print(f"  Peak Memory: {peak / 1024 / 1024:.1f} MB")
-        print(f"  Rows: {df.shape[0]:,} → {clean_df.shape[0]:,} ({results['rows_removed']:,} removed)")
+        print(
+            f"  Rows: {df.shape[0]:,} → {clean_df.shape[0]:,} ({results['rows_removed']:,} removed)"
+        )
 
     except Exception as e:
         tracemalloc.stop()
@@ -143,7 +145,10 @@ def test_individual_detectors(df: pd.DataFrame):
         try:
             findings = detector.detect(df, profile)
             elapsed = time.perf_counter() - start
-            detector_times[detector_name] = {"time": round(elapsed, 3), "findings": len(findings)}
+            detector_times[detector_name] = {
+                "time": round(elapsed, 3),
+                "findings": len(findings),
+            }
             print(f"  Time: {elapsed:.3f}s, Findings: {len(findings)}")
         except Exception as e:
             print(f"  ERROR: {e}")
@@ -154,7 +159,8 @@ def test_individual_detectors(df: pd.DataFrame):
 
 def run_benchmarks():
     """Run all benchmarks."""
-    from generate_test_data import generate_large_dataset, generate_wide_dataset
+    from generate_test_data import (generate_large_dataset,
+                                    generate_wide_dataset)
 
     all_results = []
 
@@ -192,7 +198,9 @@ def run_benchmarks():
     print("BENCHMARK SUMMARY")
     print("=" * 60)
 
-    print(f"\n{'Dataset':<25} {'Analyze':<12} {'Apply':<12} {'Total':<12} {'Issues':<10}")
+    print(
+        f"\n{'Dataset':<25} {'Analyze':<12} {'Apply':<12} {'Total':<12} {'Issues':<10}"
+    )
     print("-" * 70)
 
     for r in all_results:

@@ -1,9 +1,11 @@
 """Tests for code generation."""
 
 from __future__ import annotations
+
 import pytest
-from datawash.core.models import TransformationResult
+
 from datawash.codegen import generate_code
+from datawash.core.models import TransformationResult
 
 
 @pytest.fixture

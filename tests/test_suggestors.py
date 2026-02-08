@@ -1,10 +1,12 @@
 """Tests for suggestion engine."""
 
 from __future__ import annotations
+
 import pandas as pd
 import pytest
-from datawash.profiler import profile_dataset
+
 from datawash.detectors import run_all_detectors
+from datawash.profiler import profile_dataset
 from datawash.suggestors import generate_suggestions
 
 

@@ -4,6 +4,6 @@ from __future__ import annotations
 
 from datawash.core.report import analyze
 
-__version__ = "0.2.2"
+__version__ = "1.0.0"
 
 __all__ = ["analyze", "__version__"]

@@ -15,7 +15,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue" alt="Python">
   <img src="https://img.shields.io/badge/coverage-92%25-brightgreen" alt="Coverage">
-  <img src="https://img.shields.io/badge/tests-114%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-194%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
 
@@ -119,6 +119,7 @@ datawash codegen data.csv --apply-all
 | **Outliers** | Statistical anomalies (IQR or Z-score) |
 | **Types** | Numbers/booleans stored as strings |
 | **Similarity** | Potentially duplicate columns |
+| **PII** | Emails, SSNs, phones, credit cards, IP addresses |
 
 ### Smart Transformations
 
@@ -130,6 +131,7 @@ datawash codegen data.csv --apply-all
 | **Formats** | Standardize case, dates, strip whitespace |
 | **Columns** | Drop, rename, merge columns |
 | **Categories** | Normalize categorical values |
+| **PII** | Mask, hash, redact, or generalize sensitive data |
 
 ### Intelligent Suggestion System
 
@@ -236,9 +238,9 @@ report = analyze(
 
 | Metric | Value |
 |--------|-------|
-| Source Code | ~2,900 lines |
-| Test Code | ~1,270 lines |
-| Tests | 114 passing |
+| Source Code | ~3,200 lines |
+| Test Code | ~2,400 lines |
+| Tests | 194 passing |
 | Coverage | ~92% |
 | Python | 3.10, 3.11, 3.12 |
 | Platforms | Linux, macOS, Windows |
@@ -247,8 +249,9 @@ report = analyze(
 
 - ✅ Multi-format loading (CSV, JSON, Parquet, Excel)
 - ✅ Comprehensive profiling and statistics
-- ✅ 6 detectors for common data quality issues
-- ✅ 6 transformers with multiple operations each
+- ✅ 7 detectors for common data quality issues
+- ✅ 7 transformers with multiple operations each
+- ✅ PII detection and masking (emails, SSNs, phones, credit cards)
 - ✅ Smart suggestion system with conflict resolution
 - ✅ Reproducible Python code generation
 - ✅ Rich CLI with colored output
@@ -260,7 +263,6 @@ report = analyze(
 - Fuzzy duplicate detection for near-duplicate rows
 - Advanced imputation (KNN, MICE)
 - Cloud storage connectors (S3, BigQuery)
-- PII detection for sensitive data
 - Schema validation for expected column types and constraints
 
 ## Requirements
@@ -291,7 +293,7 @@ Contributions welcome! See [CONTRIBUTING.md](https://github.com/Pranav1011/DataW
 
 **Areas where help is needed:**
 - ML module implementation (sentence-transformers)
-- Additional detectors (PII, schema validation)
+- Additional detectors (schema validation, fuzzy duplicates)
 - Performance optimization
 - Documentation and examples
 - Cloud connectors

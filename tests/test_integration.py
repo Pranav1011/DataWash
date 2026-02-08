@@ -1,9 +1,12 @@
 """Integration tests for end-to-end workflows."""
 
 from __future__ import annotations
+
 from pathlib import Path
+
 import pandas as pd
 import pytest
+
 from datawash import analyze
 from datawash.core.report import Report
 

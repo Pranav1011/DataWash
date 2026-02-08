@@ -1,15 +1,17 @@
 """Tests for detectors."""
 
 from __future__ import annotations
+
 import pandas as pd
 import pytest
-from datawash.profiler import profile_dataset
-from datawash.detectors.missing_detector import MissingDetector
+
 from datawash.detectors.duplicate_detector import DuplicateDetector
 from datawash.detectors.format_detector import FormatDetector
+from datawash.detectors.missing_detector import MissingDetector
 from datawash.detectors.outlier_detector import OutlierDetector
-from datawash.detectors.type_detector import TypeDetector
 from datawash.detectors.similarity_detector import SimilarityDetector
+from datawash.detectors.type_detector import TypeDetector
+from datawash.profiler import profile_dataset
 
 
 class TestMissingDetector:

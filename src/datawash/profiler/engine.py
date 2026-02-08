@@ -10,10 +10,7 @@ import pandas as pd
 
 from datawash.core.models import ColumnProfile, DatasetProfile
 from datawash.profiler.patterns import detect_column_patterns
-from datawash.profiler.statistics import (
-    compute_categorical_stats,
-    compute_numeric_stats,
-)
+from datawash.profiler.statistics import compute_categorical_stats, compute_numeric_stats
 
 logger = logging.getLogger(__name__)
 

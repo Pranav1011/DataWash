@@ -15,21 +15,12 @@ from datawash.codegen import generate_code as _generate_code
 from datawash.core.cache import ComputationCache
 from datawash.core.config import Config
 from datawash.core.dtypes import optimize_dataframe
-from datawash.core.models import (
-    DatasetProfile,
-    Finding,
-    Severity,
-    Suggestion,
-    TransformationResult,
-)
+from datawash.core.models import DatasetProfile, Finding, Severity, Suggestion, TransformationResult
 from datawash.core.sampling import SmartSampler
 from datawash.detectors import run_all_detectors
 from datawash.detectors.registry import get_all_detectors
 from datawash.profiler import profile_dataset
-from datawash.profiler.parallel import (
-    profile_dataset_parallel,
-    run_detectors_parallel,
-)
+from datawash.profiler.parallel import profile_dataset_parallel, run_detectors_parallel
 from datawash.suggestors import generate_suggestions
 from datawash.suggestors.engine import _sort_by_execution_order
 from datawash.transformers import run_transformer

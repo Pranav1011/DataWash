@@ -17,6 +17,11 @@ TRANSFORMATION_ORDER: list[tuple[str, str]] = [
     # Phase 1: Structural cleaning (affects row count)
     ("duplicates", "drop_duplicates"),
     ("missing", "drop_rows"),
+    # Phase 1.5: PII handling (before value normalization)
+    ("pii", "redact"),
+    ("pii", "mask"),
+    ("pii", "hash"),
+    ("pii", "generalize"),
     # Phase 2: Value normalization (changes string values)
     ("formats", "strip_whitespace"),
     ("formats", "lowercase"),
@@ -53,6 +58,8 @@ def _get_transform_order(transformer: str, params: dict) -> int:
     elif transformer == "duplicates":
         key = "drop_duplicates"
     elif transformer == "columns":
+        key = params.get("operation", "")
+    elif transformer == "pii":
         key = params.get("operation", "")
     else:
         key = ""
@@ -98,6 +105,8 @@ def _get_transform_key(transformer: str, params: dict) -> tuple[str, str]:
     elif transformer == "duplicates":
         return (transformer, "drop_duplicates")
     elif transformer == "columns":
+        return (transformer, params.get("operation", ""))
+    elif transformer == "pii":
         return (transformer, params.get("operation", ""))
     return (transformer, "")
 
@@ -205,6 +214,18 @@ _SUGGESTION_MAP: dict[str, dict] = {
         "impact": "May reduce redundant data",
         "rationale": "Similar columns may be duplicated data or candidates for merging",
     },
+    "pii_detected": {
+        "action": "Mask or redact PII",
+        "transformer": "pii",
+        "params_fn": lambda f: {
+            "columns": f.columns,
+            "operation": "mask",
+            "pii_type": f.details.get("pii_type", "unknown"),
+            "visible_chars": 4,
+        },
+        "impact": "Protects sensitive data and ensures compliance (GDPR, HIPAA, CCPA)",
+        "rationale": "Column contains personally identifiable information",
+    },
 }
 
 
@@ -231,6 +252,52 @@ _USE_CASE_BOOSTS: dict[str, dict[str, float]] = {
     },
     "general": {},
 }
+
+
+def _deduplicate_pii_suggestions(suggestions: list[Suggestion]) -> list[Suggestion]:
+    """Remove duplicate PII suggestions for the same column.
+
+    When a column has PII detected by both pattern matching AND column name heuristics,
+    two separate suggestions are generated. This removes the lower-priority duplicate,
+    keeping only the highest-priority PII suggestion per column.
+    """
+    # Track best PII suggestion per column
+    best_pii: dict[str, Suggestion] = {}
+
+    for s in suggestions:
+        if s.transformer != "pii":
+            continue
+
+        for col in s.params.get("columns", []):
+            existing = best_pii.get(col)
+            if existing is None:
+                best_pii[col] = s
+            else:
+                # Keep the higher priority one (HIGH > MEDIUM > LOW)
+                priority_order = {"high": 0, "medium": 1, "low": 2}
+                existing_priority = priority_order.get(existing.priority.value, 999)
+                new_priority = priority_order.get(s.priority.value, 999)
+                if new_priority < existing_priority:
+                    best_pii[col] = s
+
+    # Build set of suggestions to keep
+    keep_ids = {id(s) for s in best_pii.values()}
+
+    # Return non-PII suggestions plus best PII per column
+    result = []
+    for s in suggestions:
+        if s.transformer != "pii":
+            result.append(s)
+        elif id(s) in keep_ids:
+            result.append(s)
+        else:
+            logger.debug(
+                "Removing duplicate PII suggestion for column '%s' (pii_type=%s)",
+                s.params.get("columns", ["?"])[0],
+                s.params.get("pii_type", "unknown"),
+            )
+
+    return result
 
 
 def _apply_exclusion_rules(suggestions: list[Suggestion]) -> list[Suggestion]:
@@ -317,11 +384,14 @@ def generate_suggestions(
         )
         suggestions.append(suggestion)
 
-    # Step 1: Apply exclusion rules (remove conflicting suggestions)
+    # Step 1: Deduplicate PII suggestions for same column
+    suggestions = _deduplicate_pii_suggestions(suggestions)
+
+    # Step 2: Apply exclusion rules (remove conflicting suggestions)
     suggestions = _apply_exclusion_rules(suggestions)
 
-    # Step 2: Sort by priority (for display)
+    # Step 3: Sort by priority (for display)
     suggestions = sort_suggestions(suggestions)
 
-    # Step 3: Assign IDs and limit
+    # Step 4: Assign IDs and limit
     return suggestions[:max_suggestions]

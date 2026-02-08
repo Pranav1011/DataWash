@@ -7,23 +7,20 @@ import pandas as pd
 import pytest
 
 from datawash import analyze
+from datawash.codegen import generate_code
 from datawash.core.config import Config
 from datawash.core.exceptions import AdapterError, DataWashError
-from datawash.core.models import Severity
-from datawash.profiler import profile_dataset
-from datawash.profiler.patterns import detect_column_patterns
-from datawash.profiler.statistics import (
-    compute_categorical_stats,
-    compute_numeric_stats,
-)
+from datawash.core.models import Severity, TransformationResult
 from datawash.detectors.format_detector import FormatDetector
 from datawash.detectors.outlier_detector import OutlierDetector
 from datawash.detectors.registry import get_all_detectors, run_all_detectors
+from datawash.profiler import profile_dataset
+from datawash.profiler.patterns import detect_column_patterns
+from datawash.profiler.statistics import (compute_categorical_stats,
+                                          compute_numeric_stats)
 from datawash.suggestors.engine import generate_suggestions
 from datawash.transformers import run_transformer
 from datawash.transformers.registry import get_transformer
-from datawash.codegen import generate_code
-from datawash.core.models import TransformationResult
 
 
 class TestConfigEdgeCases:

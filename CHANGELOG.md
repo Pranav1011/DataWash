@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.0] - 2026-02-07
+
+### First Stable Release
+
+DataWash is now production-ready with comprehensive data quality analysis and cleaning capabilities.
+
+### Added
+- **PII Detection**: Automatic detection of personally identifiable information
+  - Email addresses (standard format)
+  - Social Security Numbers (dashes, spaces, dots, context-aware no-separator)
+  - Phone numbers (US + international: UK, EU, Asia-Pacific)
+  - Credit cards (Visa, Mastercard, Discover, American Express with Luhn validation)
+  - IPv4 addresses
+  - US ZIP codes
+  - Column name heuristics for PII-suggestive names
+- **PII Transformers**: Four operations for handling detected PII
+  - `mask`: Keep last N characters visible (e.g., `*******6789`)
+  - `hash`: SHA256 hashing with optional salt
+  - `redact`: Replace with placeholder (e.g., `[REDACTED]`)
+  - `generalize`: Domain-specific anonymization (e.g., `****@gmail.com`)
+- International phone number support (UK +44, Germany +49, France +33, Japan +81, India +91, etc.)
+- American Express credit card detection (15-digit format with 34/37 prefix)
+- SSN format variations (XXX-XX-XXXX, XXX XX XXXX, XXX.XX.XXXX)
+- Context-aware SSN detection for 9-digit numbers (requires column name hint)
+
+### Fixed
+- Column name heuristics no longer flag numeric columns (e.g., `email_count`, `phone_calls`)
+- Reduced PII false positives by 50%
+
+### Stats
+- 7 detectors: missing, duplicates, format, outliers, types, similarity, pii
+- 7 transformers: duplicates, missing, types, formats, columns, categories, pii
+- 273 tests with 92%+ coverage
+- CLI with 4 commands: analyze, suggest, clean, codegen
+
 ## [0.2.2] - 2026-02-04
 
 ### Fixed

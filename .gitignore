@@ -57,5 +57,20 @@ dmypy.json
 # Logs
 *.log
 
-# docs
+# Internal docs (not for public)
 SPEC.md
+GAP_ANALYSIS*.md
+TESTING_CHECKLIST.md
+PERFORMANCE_REPORT.md
+
+# Internal test files
+test_exhaustive.py
+test_user_simulation.py
+test_full_functionality.py
+
+# images
+/images/
+/Image Generation/
+
+# Demo Data
+/Demo data/
