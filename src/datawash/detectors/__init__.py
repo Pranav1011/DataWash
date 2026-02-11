@@ -3,6 +3,7 @@
 # Import detectors to trigger registration (explicit re-exports for ruff)
 from . import duplicate_detector as duplicate_detector
 from . import format_detector as format_detector
+from . import fuzzy_duplicate_detector as fuzzy_duplicate_detector
 from . import missing_detector as missing_detector
 from . import outlier_detector as outlier_detector
 from . import pii_detector as pii_detector

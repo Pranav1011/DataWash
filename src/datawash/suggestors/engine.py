@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 TRANSFORMATION_ORDER: list[tuple[str, str]] = [
     # Phase 1: Structural cleaning (affects row count)
     ("duplicates", "drop_duplicates"),
+    ("fuzzy_duplicates", "remove"),  # ML-based fuzzy duplicate removal
     ("missing", "drop_rows"),
     # Phase 1.5: PII handling (before value normalization)
     ("pii", "redact"),
@@ -57,6 +58,8 @@ def _get_transform_order(transformer: str, params: dict) -> int:
         key = params.get("target_type", "")
     elif transformer == "duplicates":
         key = "drop_duplicates"
+    elif transformer == "fuzzy_duplicates":
+        key = "remove"
     elif transformer == "columns":
         key = params.get("operation", "")
     elif transformer == "pii":
@@ -104,6 +107,8 @@ def _get_transform_key(transformer: str, params: dict) -> tuple[str, str]:
         return (transformer, params.get("target_type", ""))
     elif transformer == "duplicates":
         return (transformer, "drop_duplicates")
+    elif transformer == "fuzzy_duplicates":
+        return (transformer, "remove")
     elif transformer == "columns":
         return (transformer, params.get("operation", ""))
     elif transformer == "pii":
@@ -155,6 +160,17 @@ _SUGGESTION_MAP: dict[str, dict] = {
         "params_fn": lambda f: {"keep": "first"},
         "impact": "Removes redundant data that skews analysis",
         "rationale": "Exact duplicates inflate counts and bias statistics",
+    },
+    "fuzzy_duplicates": {
+        "action": "Remove semantically similar rows",
+        "transformer": "fuzzy_duplicates",
+        "params_fn": lambda f: {
+            "columns": f.details.get("columns_compared", f.columns),
+            "threshold": f.details.get("threshold", 0.85),
+            "strategy": "most_complete",
+        },
+        "impact": "Removes near-duplicate rows that skew analysis",
+        "rationale": "Semantically similar rows (typos, abbreviations) cause data quality issues",
     },
     "inconsistent_case": {
         "action": "Standardize text casing",
@@ -232,6 +248,7 @@ _SUGGESTION_MAP: dict[str, dict] = {
 _USE_CASE_BOOSTS: dict[str, dict[str, float]] = {
     "ml": {
         "duplicate_rows": 1.5,
+        "fuzzy_duplicates": 1.5,  # Critical for ML training data quality
         "missing_values": 1.3,
         "numeric_as_string": 1.3,
         "boolean_as_string": 1.2,

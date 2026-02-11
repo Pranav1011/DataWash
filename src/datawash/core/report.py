@@ -46,6 +46,7 @@ class Report:
         use_case: Context for suggestion prioritization.
         sample: Enable smart sampling for large datasets (default True).
         parallel: Enable parallel profiling and detection (default True).
+        ml_features: Enable ML-powered features like semantic duplicate detection.
     """
 
     def __init__(
@@ -55,6 +56,7 @@ class Report:
         use_case: str = "general",
         sample: bool = True,
         parallel: bool = True,
+        ml_features: bool = False,
     ) -> None:
         # Resolve config
         if config is None:
@@ -88,28 +90,57 @@ class Report:
         else:
             analysis_df = optimized_df
 
+        # Store ml_features flag
+        self._ml_features = ml_features
+
         # Decide whether to use parallel execution
         use_parallel = parallel and (
             len(analysis_df) > _PARALLEL_THRESHOLD or len(analysis_df.columns) > 20
         )
 
+        # Determine which detectors to exclude
+        # Fuzzy duplicates only run if ml_features=True
+        ml_detectors = {"fuzzy_duplicates"}
+
         # Profile and detect
         if use_parallel:
             cache = ComputationCache(analysis_df)
             self._profile = profile_dataset_parallel(analysis_df, cache=cache)
+            config_enabled = self._config.detectors.enabled
             active = {
                 n: d
                 for n, d in get_all_detectors().items()
-                if self._config.detectors.enabled is None
-                or n in self._config.detectors.enabled
+                if (
+                    # Include if in config enabled list (or config is None = all)
+                    (config_enabled is None or n in config_enabled or
+                     # Also include ML detectors if ml_features=True
+                     (ml_features and n in ml_detectors))
+                )
+                # Exclude ML detectors if ml_features=False
+                and (n not in ml_detectors or ml_features)
             }
             self._findings = run_detectors_parallel(analysis_df, self._profile, active)
         else:
             self._profile = profile_dataset(analysis_df)
+            # Handle ML detector inclusion/exclusion
+            enabled = self._config.detectors.enabled
+            if ml_features:
+                # Add ML detectors to enabled list if not already present
+                if enabled is not None:
+                    enabled = list(enabled) + [d for d in ml_detectors if d not in enabled]
+                # If enabled is None, all detectors run including ML
+            else:
+                # Exclude ML detectors
+                all_detectors = set(get_all_detectors().keys())
+                non_ml = all_detectors - ml_detectors
+                if enabled is None:
+                    enabled = list(non_ml)
+                else:
+                    enabled = [d for d in enabled if d not in ml_detectors]
             self._findings = run_all_detectors(
                 analysis_df,
                 self._profile,
-                enabled=self._config.detectors.enabled,
+                enabled=enabled,
             )
 
         # Restore original row/column counts in profile when sampled
@@ -407,6 +438,7 @@ def analyze(
     use_case: str = "general",
     sample: bool = True,
     parallel: bool = True,
+    ml_features: bool = False,
 ) -> Report:
     """Analyze a dataset and return a Report.
 
@@ -418,10 +450,17 @@ def analyze(
         use_case: One of "general", "ml", "analytics", "export".
         sample: Enable smart sampling for large datasets.
         parallel: Enable parallel profiling and detection.
+        ml_features: Enable ML-powered features like semantic duplicate detection.
+            Requires ML dependencies: pip install datawash[ml]
 
     Returns:
         A Report object with issues, suggestions, and cleaning methods.
     """
     return Report(
-        data, config=config, use_case=use_case, sample=sample, parallel=parallel
+        data,
+        config=config,
+        use_case=use_case,
+        sample=sample,
+        parallel=parallel,
+        ml_features=ml_features,
     )
