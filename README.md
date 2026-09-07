@@ -52,7 +52,7 @@ pip install datawash
 
 ```bash
 pip install datawash[formats]  # Parquet + Excel support
-pip install datawash[ml]       # ML-powered detection (coming soon)
+pip install datawash[ml]       # ML-powered semantic duplicate detection
 pip install datawash[all]      # All optional dependencies
 pip install datawash[dev]      # Development tools
 ```
