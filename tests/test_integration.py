@@ -4,11 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from datawash import analyze
+from datawash.core.models import DatasetProfile, Finding, Severity
 from datawash.core.report import Report
+from datawash.detectors.base import BaseDetector
+from datawash.detectors.registry import _DETECTORS
 
 
 def test_full_workflow(messy_df: pd.DataFrame) -> None:
@@ -106,6 +110,28 @@ def test_apply_stores_quality_scores(messy_df: pd.DataFrame) -> None:
     assert report._last_score_after >= report._last_score_before
 
 
+class _AlwaysFindsDetector(BaseDetector):
+    """Stand-in for the ML-only fuzzy duplicate detector."""
+
+    @property
+    def name(self) -> str:
+        return "fuzzy_duplicates"
+
+    @property
+    def description(self) -> str:
+        return "Test stub that always reports one issue"
+
+    def detect(self, df: pd.DataFrame, profile: DatasetProfile) -> list[Finding]:
+        return [
+            Finding(
+                detector=self.name,
+                issue_type="fuzzy_duplicates",
+                severity=Severity.HIGH,
+                message="stub finding",
+            )
+        ]
+
+
 def test_scores_are_none_before_apply(messy_df: pd.DataFrame) -> None:
     report = analyze(messy_df)
     assert report.last_score_before is None
@@ -113,6 +139,37 @@ def test_scores_are_none_before_apply(messy_df: pd.DataFrame) -> None:
     report.apply_all()
     assert report.last_score_before == report._last_score_before
     assert report.last_score_after == report._last_score_after
+
+
+@pytest.mark.parametrize("parallel", [True, False])
+def test_apply_nothing_keeps_score_with_ml_features(
+    messy_df: pd.DataFrame, monkeypatch: pytest.MonkeyPatch, parallel: bool
+) -> None:
+    """The after-score uses the same detectors as the before-score."""
+    monkeypatch.setitem(_DETECTORS, "fuzzy_duplicates", _AlwaysFindsDetector())
+    report = analyze(messy_df, ml_features=True, parallel=parallel)
+    report.apply([])
+    assert report.last_score_before == report.quality_score
+    assert report.last_score_after == report.last_score_before
+
+
+def test_apply_nothing_keeps_score_on_sampled_data() -> None:
+    """The after-score samples large data the same way the before-score does."""
+    rng = np.random.default_rng(0)
+    n = 57_000
+    df = pd.DataFrame(
+        {
+            "id": np.arange(n),
+            "value": rng.normal(size=n),
+            "label": rng.choice(["a", "b", "c"], n),
+        }
+    )
+    # 5% duplicates in full data, far fewer inside the 10k-row sample
+    df = pd.concat([df, df.iloc[:3000]], ignore_index=True)
+    report = analyze(df)
+    assert report.profile.sampled
+    report.apply([])
+    assert report.last_score_after == report.last_score_before
 
 
 def test_apply_interactive_skip_all_keeps_score(messy_df: pd.DataFrame) -> None:

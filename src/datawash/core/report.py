@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
 from typing import Any, Optional
 
@@ -24,6 +25,7 @@ from datawash.core.models import (
 )
 from datawash.core.sampling import SmartSampler
 from datawash.detectors import run_all_detectors
+from datawash.detectors.base import BaseDetector
 from datawash.detectors.registry import get_all_detectors
 from datawash.profiler import profile_dataset
 from datawash.profiler.parallel import profile_dataset_parallel, run_detectors_parallel
@@ -35,6 +37,9 @@ logger = logging.getLogger(__name__)
 
 # Threshold below which parallel overhead isn't worth it
 _PARALLEL_THRESHOLD = 5000
+
+# Detectors that only run when ml_features=True
+_ML_DETECTORS = frozenset({"fuzzy_duplicates"})
 
 
 class Report:
@@ -75,73 +80,11 @@ class Report:
             self._df = data
             self._source_path = None
 
-        # Optimize dtypes for faster analysis
-        try:
-            optimized_df = optimize_dataframe(self._df)
-        except Exception:
-            logger.debug("Dtype optimization skipped", exc_info=True)
-            optimized_df = self._df
-
-        # Smart sampling for large datasets
-        self._sampler: SmartSampler | None = None
-        if sample and len(optimized_df) >= 50_000:
-            self._sampler = SmartSampler(optimized_df)
-            analysis_df = self._sampler.sample_df
-        else:
-            analysis_df = optimized_df
-
-        # Store ml_features flag
+        self._sample = sample
+        self._parallel = parallel
         self._ml_features = ml_features
 
-        # Decide whether to use parallel execution
-        use_parallel = parallel and (
-            len(analysis_df) > _PARALLEL_THRESHOLD or len(analysis_df.columns) > 20
-        )
-
-        # Determine which detectors to exclude
-        # Fuzzy duplicates only run if ml_features=True
-        ml_detectors = {"fuzzy_duplicates"}
-
-        # Profile and detect
-        if use_parallel:
-            cache = ComputationCache(analysis_df)
-            self._profile = profile_dataset_parallel(analysis_df, cache=cache)
-            config_enabled = self._config.detectors.enabled
-            active = {
-                n: d
-                for n, d in get_all_detectors().items()
-                if (
-                    # Include if in config enabled list (or config is None = all)
-                    (config_enabled is None or n in config_enabled or
-                     # Also include ML detectors if ml_features=True
-                     (ml_features and n in ml_detectors))
-                )
-                # Exclude ML detectors if ml_features=False
-                and (n not in ml_detectors or ml_features)
-            }
-            self._findings = run_detectors_parallel(analysis_df, self._profile, active)
-        else:
-            self._profile = profile_dataset(analysis_df)
-            # Handle ML detector inclusion/exclusion
-            enabled = self._config.detectors.enabled
-            if ml_features:
-                # Add ML detectors to enabled list if not already present
-                if enabled is not None:
-                    enabled = list(enabled) + [d for d in ml_detectors if d not in enabled]
-                # If enabled is None, all detectors run including ML
-            else:
-                # Exclude ML detectors
-                all_detectors = set(get_all_detectors().keys())
-                non_ml = all_detectors - ml_detectors
-                if enabled is None:
-                    enabled = list(non_ml)
-                else:
-                    enabled = [d for d in enabled if d not in ml_detectors]
-            self._findings = run_all_detectors(
-                analysis_df,
-                self._profile,
-                enabled=enabled,
-            )
+        self._sampler, self._profile, self._findings = self._analyze(self._df)
 
         # Restore original row/column counts in profile when sampled
         if self._sampler and self._sampler.is_sampled:
@@ -167,6 +110,68 @@ class Report:
         self._last_score_before: int | None = None
         self._last_score_after: int | None = None
 
+    def _active_detectors(self) -> dict[str, BaseDetector]:
+        """Detectors enabled in config, plus ML detectors if ml_features is on."""
+        enabled = self._config.detectors.enabled
+        return {
+            name: detector
+            for name, detector in get_all_detectors().items()
+            if (name in _ML_DETECTORS and self._ml_features)
+            or (name not in _ML_DETECTORS and (enabled is None or name in enabled))
+        }
+
+    def _analyze(
+        self, df: pd.DataFrame
+    ) -> tuple[SmartSampler | None, DatasetProfile, list[Finding]]:
+        """Profile and run detectors on df using this report's settings.
+
+        Used for both the initial analysis and the after-apply score, so
+        the two scores see the same dtypes, sampling and detectors.
+        """
+        try:
+            optimized_df = optimize_dataframe(df)
+        except Exception:
+            logger.debug("Dtype optimization skipped", exc_info=True)
+            optimized_df = df
+
+        sampler: SmartSampler | None = None
+        if self._sample and len(optimized_df) >= 50_000:
+            sampler = SmartSampler(optimized_df)
+            analysis_df = sampler.sample_df
+        else:
+            analysis_df = optimized_df
+
+        use_parallel = self._parallel and (
+            len(analysis_df) > _PARALLEL_THRESHOLD or len(analysis_df.columns) > 20
+        )
+        active = self._active_detectors()
+        if use_parallel:
+            cache = ComputationCache(analysis_df)
+            profile = profile_dataset_parallel(analysis_df, cache=cache)
+            findings = run_detectors_parallel(analysis_df, profile, active)
+        else:
+            profile = profile_dataset(analysis_df)
+            findings = run_all_detectors(analysis_df, profile, enabled=list(active))
+        return sampler, profile, findings
+
+    @staticmethod
+    def _score_findings(findings: list[Finding], row_count: int) -> int:
+        """Score 0-100: start at 100, subtract a confidence-scaled penalty each."""
+        if row_count == 0:
+            return 100
+        penalties = []
+        for finding in findings:
+            if finding.severity == Severity.HIGH:
+                penalty = 10.0
+            elif finding.severity == Severity.MEDIUM:
+                penalty = 5.0
+            else:
+                penalty = 2.0
+            penalties.append(penalty * finding.confidence)
+        # fsum is order-independent, so parallel detector order can't shift it
+        score = 100.0 - math.fsum(penalties)
+        return max(0, min(100, int(score)))
+
     @property
     def df(self) -> pd.DataFrame:
         """The original DataFrame (read-only copy)."""
@@ -190,20 +195,7 @@ class Report:
     @property
     def quality_score(self) -> int:
         """Data quality score from 0 to 100."""
-        score = 100.0
-        if self._profile.row_count == 0:
-            return 100
-        for finding in self._findings:
-            if finding.severity == Severity.HIGH:
-                penalty = 10.0
-            elif finding.severity == Severity.MEDIUM:
-                penalty = 5.0
-            else:
-                penalty = 2.0
-            # Scale by confidence
-            penalty *= finding.confidence
-            score -= penalty
-        return max(0, min(100, int(score)))
+        return self._score_findings(self._findings, self._profile.row_count)
 
     @property
     def last_score_before(self) -> int | None:
@@ -221,25 +213,13 @@ class Report:
         return list(self._suggestions)
 
     def _compute_quality_score(self, df: pd.DataFrame) -> int:
-        """Compute quality score for an arbitrary DataFrame."""
-        from datawash.detectors import run_all_detectors as _detect
-        from datawash.profiler import profile_dataset as _profile
+        """Compute quality score for an arbitrary DataFrame.
 
-        prof = _profile(df)
-        findings = _detect(df, prof, enabled=self._config.detectors.enabled)
-        score = 100.0
-        if prof.row_count == 0:
-            return 100
-        for f in findings:
-            if f.severity == Severity.HIGH:
-                penalty = 10.0
-            elif f.severity == Severity.MEDIUM:
-                penalty = 5.0
-            else:
-                penalty = 2.0
-            penalty *= f.confidence
-            score -= penalty
-        return max(0, min(100, int(score)))
+        Uses the same analysis path as quality_score, so applying no
+        suggestions leaves the score unchanged.
+        """
+        _, profile, findings = self._analyze(df)
+        return self._score_findings(findings, profile.row_count)
 
     def apply(self, suggestion_ids: list[int]) -> pd.DataFrame:
         """Apply selected suggestions by ID, return cleaned DataFrame."""
