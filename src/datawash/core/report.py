@@ -23,7 +23,7 @@ from datawash.core.models import (
     Suggestion,
     TransformationResult,
 )
-from datawash.core.sampling import SmartSampler
+from datawash.core.sampling import SAMPLE_THRESHOLD, SmartSampler
 from datawash.detectors import run_all_detectors
 from datawash.detectors.base import BaseDetector
 from datawash.detectors.registry import get_all_detectors
@@ -135,7 +135,7 @@ class Report:
             optimized_df = df
 
         sampler: SmartSampler | None = None
-        if self._sample and len(optimized_df) >= 50_000:
+        if self._sample and len(optimized_df) >= SAMPLE_THRESHOLD:
             sampler = SmartSampler(optimized_df)
             analysis_df = sampler.sample_df
         else:
@@ -227,6 +227,10 @@ class Report:
         result_df = self._df.copy()
         id_map = {s.id: s for s in self._suggestions}
         applied: list[TransformationResult] = []
+        # Recorded up front so an error mid-apply leaves what actually ran.
+        self._applied = applied
+        self._last_score_before = None
+        self._last_score_after = None
 
         # Collect and sort suggestions by execution order
         suggestions_to_apply = []
@@ -252,13 +256,14 @@ class Report:
                 tx_result.rows_affected,
             )
 
-        score_after = self._compute_quality_score(result_df)
+        score_after = (
+            self._compute_quality_score(result_df) if applied else score_before
+        )
         diff = score_after - score_before
         sign = "+" if diff >= 0 else ""
         logger.info(
             "Quality score: %d → %d (%s%d)", score_before, score_after, sign, diff
         )
-        self._applied = applied
         self._last_score_before = score_before
         self._last_score_after = score_after
         return result_df
@@ -285,6 +290,10 @@ class Report:
         score_before = self.quality_score
         result_df = self._df.copy()
         applied: list[TransformationResult] = []
+        # Recorded up front so an error mid-apply leaves what actually ran.
+        self._applied = applied
+        self._last_score_before = None
+        self._last_score_after = None
         apply_all = False
 
         # Sort suggestions by execution order to prevent conflicts
@@ -336,12 +345,13 @@ class Report:
                 f"({tx_result.rows_affected} rows affected)"
             )
 
-        score_after = self._compute_quality_score(result_df)
+        score_after = (
+            self._compute_quality_score(result_df) if applied else score_before
+        )
         diff = score_after - score_before
         sign = "+" if diff >= 0 else ""
         msg = f"\n[bold]Quality score: {score_before} → {score_after} ({sign}{diff})[/bold]"
         console.print(msg)
-        self._applied = applied
         self._last_score_before = score_before
         self._last_score_after = score_after
         return result_df

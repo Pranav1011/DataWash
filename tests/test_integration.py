@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 from datawash import analyze
+from datawash.core import report as report_module
 from datawash.core.models import DatasetProfile, Finding, Severity
 from datawash.core.report import Report
 from datawash.detectors.base import BaseDetector
@@ -105,9 +106,9 @@ def test_apply_stores_quality_scores(messy_df: pd.DataFrame) -> None:
     """Test that apply() stores before/after quality scores."""
     report = analyze(messy_df)
     report.apply_all()
-    assert hasattr(report, "_last_score_before")
-    assert hasattr(report, "_last_score_after")
-    assert report._last_score_after >= report._last_score_before
+    assert report.last_score_before is not None
+    assert report.last_score_after is not None
+    assert report.last_score_after >= report.last_score_before
 
 
 class _AlwaysFindsDetector(BaseDetector):
@@ -148,8 +149,8 @@ def test_apply_nothing_keeps_score_with_ml_features(
     """The after-score uses the same detectors as the before-score."""
     monkeypatch.setitem(_DETECTORS, "fuzzy_duplicates", _AlwaysFindsDetector())
     report = analyze(messy_df, ml_features=True, parallel=parallel)
+    assert report._compute_quality_score(report.df) == report.quality_score
     report.apply([])
-    assert report.last_score_before == report.quality_score
     assert report.last_score_after == report.last_score_before
 
 
@@ -168,8 +169,32 @@ def test_apply_nothing_keeps_score_on_sampled_data() -> None:
     df = pd.concat([df, df.iloc[:3000]], ignore_index=True)
     report = analyze(df)
     assert report.profile.sampled
+    assert report._compute_quality_score(report.df) == report.quality_score
     report.apply([])
     assert report.last_score_after == report.last_score_before
+
+
+def test_failed_apply_records_partial_state(
+    messy_df: pd.DataFrame, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An error mid-apply must not make generate_code() apply everything."""
+    report = analyze(messy_df)
+    ids = [s.id for s in report.suggestions[:2]]
+    real_run = report_module.run_transformer
+    calls = iter([real_run, None])
+
+    def flaky_run(*args: object, **kwargs: object) -> object:
+        run = next(calls)
+        if run is None:
+            raise RuntimeError("transformer failed")
+        return run(*args, **kwargs)
+
+    monkeypatch.setattr(report_module, "run_transformer", flaky_run)
+    with pytest.raises(RuntimeError):
+        report.apply(ids)
+    assert report._applied is not None
+    assert len(report._applied) == 1
+    assert report.last_score_after is None
 
 
 def test_apply_interactive_skip_all_keeps_score(messy_df: pd.DataFrame) -> None:
