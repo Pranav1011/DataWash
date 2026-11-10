@@ -262,3 +262,24 @@ class TestReportEdgeCases:
         report = analyze(df)
         code = report.generate_code()
         assert isinstance(code, str)
+        assert "def clean_data" in code
+
+    @pytest.mark.parametrize("ids", [[], [999]])
+    def test_generate_code_after_applying_nothing(
+        self, ids: list[int], caplog: pytest.LogCaptureFixture
+    ) -> None:
+        df = pd.DataFrame({"a": [1, None, 3]})
+        report = analyze(df)
+        report.apply(ids)
+        with caplog.at_level("WARNING", logger="datawash.core.report"):
+            code = report.generate_code()
+        assert code == generate_code([])
+        assert report._applied == []
+        assert "no transformations were applied" in caplog.text.lower()
+
+    def test_generate_code_after_skipping_everything_interactively(self) -> None:
+        df = pd.DataFrame({"a": [1, None, 3]})
+        report = analyze(df)
+        report.apply_interactive(input_fn=lambda _prompt: "s")
+        assert report.generate_code() == generate_code([])
+        assert report._applied == []

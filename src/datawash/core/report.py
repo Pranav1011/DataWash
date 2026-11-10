@@ -162,7 +162,10 @@ class Report:
             max_suggestions=self._config.suggestions.max_suggestions,
             use_case=self._config.use_case,
         )
-        self._applied: list[TransformationResult] = []
+        # None until apply()/apply_interactive() runs; [] means nothing applied.
+        self._applied: list[TransformationResult] | None = None
+        self._last_score_before: int | None = None
+        self._last_score_after: int | None = None
 
     @property
     def df(self) -> pd.DataFrame:
@@ -202,6 +205,16 @@ class Report:
             score -= penalty
         return max(0, min(100, int(score)))
 
+    @property
+    def last_score_before(self) -> int | None:
+        """Quality score before the last apply, or None if never applied."""
+        return self._last_score_before
+
+    @property
+    def last_score_after(self) -> int | None:
+        """Quality score after the last apply, or None if never applied."""
+        return self._last_score_after
+
     def suggest(self, use_case: Optional[str] = None) -> list[Suggestion]:
         """Get filtered suggestions, optionally for a specific use case."""
         # For now, return all suggestions. Use-case filtering is Phase 2.
@@ -233,7 +246,7 @@ class Report:
         score_before = self.quality_score
         result_df = self._df.copy()
         id_map = {s.id: s for s in self._suggestions}
-        self._applied = []
+        applied: list[TransformationResult] = []
 
         # Collect and sort suggestions by execution order
         suggestions_to_apply = []
@@ -251,7 +264,7 @@ class Report:
             result_df, tx_result = run_transformer(
                 suggestion.transformer, result_df, **suggestion.params
             )
-            self._applied.append(tx_result)
+            applied.append(tx_result)
             logger.info(
                 "Applied suggestion %d (%s): %d rows affected",
                 suggestion.id,
@@ -265,6 +278,7 @@ class Report:
         logger.info(
             "Quality score: %d → %d (%s%d)", score_before, score_after, sign, diff
         )
+        self._applied = applied
         self._last_score_before = score_before
         self._last_score_after = score_after
         return result_df
@@ -290,7 +304,7 @@ class Report:
 
         score_before = self.quality_score
         result_df = self._df.copy()
-        self._applied = []
+        applied: list[TransformationResult] = []
         apply_all = False
 
         # Sort suggestions by execution order to prevent conflicts
@@ -336,7 +350,7 @@ class Report:
             result_df, tx_result = run_transformer(
                 suggestion.transformer, result_df, **suggestion.params
             )
-            self._applied.append(tx_result)
+            applied.append(tx_result)
             console.print(
                 f"[green]✓ Applied:[/green] {suggestion.action} "
                 f"({tx_result.rows_affected} rows affected)"
@@ -347,20 +361,28 @@ class Report:
         sign = "+" if diff >= 0 else ""
         msg = f"\n[bold]Quality score: {score_before} → {score_after} ({sign}{diff})[/bold]"
         console.print(msg)
+        self._applied = applied
         self._last_score_before = score_before
         self._last_score_after = score_after
         return result_df
 
     def generate_code(self, style: str = "function") -> str:
-        """Generate Python code for applied transformations.
+        """Generate Python code for the transformations applied last.
 
-        Must call apply() or apply_all() first.
+        If neither apply(), apply_all() nor apply_interactive() has been
+        called yet, all suggestions are applied first. If one of them was
+        called but applied nothing, the returned code contains no
+        transformations and a warning is logged.
         """
-        if not self._applied:
-            # Auto-apply all if nothing applied yet
+        if self._applied is None:
             self.apply_all()
+        applied = self._applied or []
+        if not applied:
+            logger.warning(
+                "No transformations were applied; generated code is a no-op"
+            )
         return _generate_code(
-            self._applied,
+            applied,
             style=style,
             include_comments=self._config.codegen.include_comments,
         )

@@ -109,11 +109,12 @@ def clean(
     adapter.write(clean_df, output)
     console.print(f"Saved cleaned data to [bold]{output}[/]")
 
-    format_transformation_summary(before_rows, len(clean_df), len(report._applied))
+    n_applied = len(report._applied or [])
+    format_transformation_summary(before_rows, len(clean_df), n_applied)
 
     # Show before/after quality score
-    score_before = getattr(report, "_last_score_before", None)
-    score_after = getattr(report, "_last_score_after", None)
+    score_before = report.last_score_before
+    score_after = report.last_score_after
     if score_before is not None and score_after is not None:
         diff = score_after - score_before
         sign = "+" if diff >= 0 else ""

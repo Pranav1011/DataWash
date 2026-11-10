@@ -9,6 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 from datawash.cli.main import app
+from datawash.codegen import generate_code
 
 runner = CliRunner()
 
@@ -87,3 +88,25 @@ def test_help() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "datawash" in result.output.lower() or "intelligent" in result.output.lower()
+
+
+def test_clean_unknown_id_codegen_is_noop(csv_file: Path, tmp_path: Path) -> None:
+    """Codegen reflects what was applied, even when nothing was."""
+    output = tmp_path / "clean.csv"
+    code_path = tmp_path / "clean.py"
+    result = runner.invoke(
+        app,
+        [
+            "clean",
+            str(csv_file),
+            "-o",
+            str(output),
+            "--apply",
+            "999",
+            "--codegen",
+            str(code_path),
+        ],
+    )
+    assert result.exit_code == 0
+    assert code_path.read_text() == generate_code([])
+    assert pd.read_csv(output).equals(pd.read_csv(csv_file))

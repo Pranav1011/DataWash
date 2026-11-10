@@ -104,3 +104,18 @@ def test_apply_stores_quality_scores(messy_df: pd.DataFrame) -> None:
     assert hasattr(report, "_last_score_before")
     assert hasattr(report, "_last_score_after")
     assert report._last_score_after >= report._last_score_before
+
+
+def test_scores_are_none_before_apply(messy_df: pd.DataFrame) -> None:
+    report = analyze(messy_df)
+    assert report.last_score_before is None
+    assert report.last_score_after is None
+    report.apply_all()
+    assert report.last_score_before == report._last_score_before
+    assert report.last_score_after == report._last_score_after
+
+
+def test_apply_interactive_skip_all_keeps_score(messy_df: pd.DataFrame) -> None:
+    report = analyze(messy_df)
+    report.apply_interactive(input_fn=lambda _prompt: "q")
+    assert report.last_score_after == report.last_score_before
