@@ -201,11 +201,11 @@ Median of three `analyze()` runs on synthetic data from
 
 | Dataset | `analyze()` time | Sampled |
 |---------|------------------|---------|
-| 1M rows x 10 cols | 1.10s | yes |
-| 100K rows x 50 cols | 3.65s | yes |
-| 10K rows x 100 cols | 7.46s | no |
-| 1M rows x 50 cols | 5.72s | yes |
-| 50K rows x 250 cols | 17.39s | yes |
+| 1M rows x 10 cols | 1.09s | yes |
+| 100K rows x 50 cols | 3.34s | yes |
+| 10K rows x 100 cols | 7.00s | no |
+| 1M rows x 50 cols | 4.67s | yes |
+| 50K rows x 250 cols | 16.66s | yes |
 
 Reproduce with `python tests/benchmark_readme.py` (about 2 minutes). Because
 large inputs are sampled, time grows with the number of columns much more than
