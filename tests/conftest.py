@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
+
+# CLI tests compare plain output; forced color (set in many CI shells) would
+# add escape codes. Cleared before datawash creates its Rich consoles.
+os.environ.pop("FORCE_COLOR", None)
 
 
 @pytest.fixture
