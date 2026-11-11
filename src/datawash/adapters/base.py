@@ -45,14 +45,15 @@ def load_dataframe(
     """
     path = Path(source)
     if not path.exists():
-        raise AdapterError(f"File not found: {path}")
+        raise AdapterError(f"File not found: {path}. Check the path and try again.")
 
     ext = format or path.suffix.lstrip(".")
     adapter = _ADAPTERS.get(ext)
     if adapter is None:
         raise AdapterError(
             f"Unsupported format: '{ext}'. "
-            f"Supported formats: {', '.join(sorted(_ADAPTERS.keys()))}"
+            f"Convert the file to a supported format: "
+            f"{', '.join(sorted(_ADAPTERS.keys()))}."
         )
 
     try:
@@ -62,5 +63,14 @@ def load_dataframe(
         return df
     except AdapterError:
         raise
+    except pd.errors.EmptyDataError as e:
+        raise AdapterError(
+            f"File is empty: {path}. Add a header row and data, then try again."
+        ) from e
+    except UnicodeDecodeError as e:
+        raise AdapterError(
+            f"Cannot read {path}: it is not UTF-8 text. "
+            f"Check that it is a real .{ext} file saved as UTF-8."
+        ) from e
     except Exception as e:
         raise AdapterError(f"Failed to read {path}: {e}") from e

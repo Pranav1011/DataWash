@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Any, NoReturn, Optional
 
 import typer
 from rich.console import Console
+from rich.markup import escape
+
+from datawash.core.exceptions import AdapterError
+
+if TYPE_CHECKING:
+    from datawash.core.report import Report
 
 app = typer.Typer(
     name="datawash",
@@ -14,6 +20,34 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+def _fail(message: str) -> NoReturn:
+    """Print a one-line user error in red and exit with code 1."""
+    console.print(f"[red]{escape(message)}[/]", soft_wrap=True)
+    raise typer.Exit(1)
+
+
+def _load_report(file: Path, **kwargs: Any) -> Report:
+    """Analyze a data file, turning load errors into a clean CLI error."""
+    from datawash.core.report import Report
+
+    try:
+        with console.status("Analyzing..."):
+            return Report(str(file), **kwargs)
+    except AdapterError as e:
+        _fail(str(e))
+
+
+def _parse_ids(apply: str) -> list[int]:
+    """Parse a comma-separated --apply value into suggestion IDs."""
+    try:
+        return [int(x.strip()) for x in apply.split(",")]
+    except ValueError:
+        _fail(
+            f"Invalid --apply value '{apply}'. Use comma-separated suggestion "
+            "numbers from 'datawash suggest', e.g. --apply 1,3"
+        )
 
 
 @app.command()
@@ -30,10 +64,8 @@ def analyze(
         format_profile,
         format_suggestions,
     )
-    from datawash.core.report import Report
 
-    with console.status("Analyzing..."):
-        report = Report(str(file))
+    report = _load_report(file)
 
     format_profile(report.profile)
     console.print()
@@ -55,10 +87,8 @@ def suggest(
 ) -> None:
     """Show cleaning suggestions for a dataset."""
     from datawash.cli.formatters import format_suggestions
-    from datawash.core.report import Report
 
-    with console.status("Analyzing..."):
-        report = Report(str(file), use_case=use_case)
+    report = _load_report(file, use_case=use_case)
 
     suggestions = report.suggestions
     if priority != "all":
@@ -84,17 +114,15 @@ def clean(
     """Clean a dataset by applying suggestions."""
     from datawash.adapters.base import _ADAPTERS
     from datawash.cli.formatters import format_transformation_summary
-    from datawash.core.report import Report
 
-    with console.status("Analyzing..."):
-        report = Report(str(file), use_case=use_case)
+    report = _load_report(file, use_case=use_case)
 
     before_rows = len(report.df)
 
     if apply_all:
         clean_df = report.apply_all()
     elif apply:
-        ids = [int(x.strip()) for x in apply.split(",")]
+        ids = _parse_ids(apply)
         clean_df = report.apply(ids)
     else:
         console.print("[red]Specify --apply or --apply-all[/]")
@@ -143,15 +171,12 @@ def codegen(
     ),
 ) -> None:
     """Generate Python code for data cleaning transformations."""
-    from datawash.core.report import Report
-
-    with console.status("Analyzing..."):
-        report = Report(str(file))
+    report = _load_report(file)
 
     if apply_all:
         report.apply_all()
     elif apply:
-        ids = [int(x.strip()) for x in apply.split(",")]
+        ids = _parse_ids(apply)
         report.apply(ids)
     else:
         report.apply_all()

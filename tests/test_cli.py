@@ -110,3 +110,102 @@ def test_clean_unknown_id_codegen_is_noop(csv_file: Path, tmp_path: Path) -> Non
     assert result.exit_code == 0
     assert code_path.read_text() == generate_code([])
     assert pd.read_csv(output).equals(pd.read_csv(csv_file))
+
+
+MIXED_DATES_CSV = (
+    "name,signup_date\n"
+    "Alice,2024-01-15\n"
+    "Bob,01/20/2024\n"
+    "Carol,2024-01-25\n"
+    'Dave,"Jan 30, 2024"\n'
+    "Eve,2024-02-01\n"
+)
+
+
+def test_clean_standardizes_mixed_dates_and_codegen_matches(tmp_path: Path) -> None:
+    src = tmp_path / "mixed.csv"
+    src.write_text(MIXED_DATES_CSV)
+    output = tmp_path / "clean.csv"
+    code_path = tmp_path / "clean.py"
+    result = runner.invoke(
+        app,
+        [
+            "clean",
+            str(src),
+            "-o",
+            str(output),
+            "--apply-all",
+            "--codegen",
+            str(code_path),
+        ],
+    )
+    assert result.exit_code == 0
+    cleaned = pd.read_csv(output)
+    assert cleaned["signup_date"].tolist() == [
+        "2024-01-15",
+        "2024-01-20",
+        "2024-01-25",
+        "2024-01-30",
+        "2024-02-01",
+    ]
+
+    namespace: dict[str, object] = {}
+    exec(code_path.read_text(), namespace)
+    replayed = tmp_path / "replayed.csv"
+    namespace["clean_data"](pd.read_csv(src)).to_csv(replayed, index=False)
+    pd.testing.assert_frame_equal(pd.read_csv(replayed), cleaned)
+
+
+def _write_png(path: Path) -> None:
+    path.write_bytes(b"\x89PNG\r\n\x1a\n" + bytes(range(256)))
+
+
+@pytest.mark.parametrize(
+    ("name", "setup", "expected"),
+    [
+        ("empty.csv", lambda p: p.write_text(""), "File is empty"),
+        ("missing.csv", lambda p: None, "File not found"),
+        ("image.png", _write_png, "Unsupported format: 'png'"),
+        ("notes.txt", lambda p: p.write_text("hello"), "Unsupported format: 'txt'"),
+        ("binary.csv", _write_png, "is not UTF-8 text"),
+    ],
+)
+@pytest.mark.parametrize("command", ["analyze", "suggest", "clean", "codegen"])
+def test_bad_input_file_gives_clean_error(
+    tmp_path: Path, command: str, name: str, setup: object, expected: str
+) -> None:
+    path = tmp_path / name
+    setup(path)  # type: ignore[operator]
+    args = [command, str(path)]
+    if command == "clean":
+        args += ["-o", str(tmp_path / "out.csv"), "--apply-all"]
+    result = runner.invoke(app, args)
+    assert result.exit_code == 1
+    assert isinstance(result.exception, SystemExit)
+    assert expected in result.output
+    assert len(result.output.strip().splitlines()) == 1
+
+
+@pytest.mark.parametrize("command", ["clean", "codegen"])
+def test_non_numeric_apply_gives_clean_error(
+    csv_file: Path, tmp_path: Path, command: str
+) -> None:
+    args = [command, str(csv_file), "--apply", "abc"]
+    if command == "clean":
+        args += ["-o", str(tmp_path / "out.csv")]
+    result = runner.invoke(app, args)
+    assert result.exit_code == 1
+    assert isinstance(result.exception, SystemExit)
+    assert "Invalid --apply value 'abc'" in result.output
+    assert len(result.output.strip().splitlines()) == 1
+
+
+def test_unexpected_errors_still_surface(
+    csv_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr("datawash.core.report.Report.__init__", boom)
+    result = runner.invoke(app, ["analyze", str(csv_file)])
+    assert isinstance(result.exception, RuntimeError)

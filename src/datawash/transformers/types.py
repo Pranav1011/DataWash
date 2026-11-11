@@ -49,7 +49,9 @@ class TypeTransformer(BaseTransformer):
                 result_df[col] = result_df[col].astype(str).str.lower().map(bool_map)
                 affected += len(result_df[col].dropna())
             elif target_type == "datetime":
-                result_df[col] = pd.to_datetime(result_df[col], errors="coerce")
+                result_df[col] = pd.to_datetime(
+                    result_df[col], errors="coerce", format="mixed"
+                )
                 affected += int(result_df[col].notna().sum())
             elif target_type == "string":
                 result_df[col] = result_df[col].astype(str)
@@ -85,7 +87,8 @@ class TypeTransformer(BaseTransformer):
                 )
             elif target_type == "datetime":
                 lines.append(
-                    f"df[{repr(col)}] = pd.to_datetime(df[{repr(col)}], errors='coerce')"
+                    f"df[{repr(col)}] = pd.to_datetime(df[{repr(col)}], "
+                    "errors='coerce', format='mixed')"
                 )
             elif target_type == "string":
                 lines.append(f"df[{repr(col)}] = df[{repr(col)}].astype(str)")

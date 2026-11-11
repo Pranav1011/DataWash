@@ -93,7 +93,7 @@ datawash/
 
 ### Core (always installed)
 ```
-pandas>=1.5.0
+pandas>=2.0.0
 numpy>=1.21.0
 pydantic>=2.0.0
 rich>=13.0.0

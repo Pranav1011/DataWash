@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed
+- Date standardization now parses mixed formats (e.g. `2024-01-15`, `01/20/2024`, `Jan 30, 2024`) on pandas 2 and 3; previously only values matching the first format were converted. Generated code uses the same parsing, and "rows affected" counts only values that changed.
+- CLI errors for missing, empty, unsupported or binary files and non-numeric `--apply` IDs now print one red line with a fix and exit with code 1, instead of a traceback.
+
+### Changed
+- Minimum pandas version raised to 2.0 (needed for `format="mixed"` date parsing).
+
 ## [1.0.0] - 2026-02-07
 
 ### First Stable Release

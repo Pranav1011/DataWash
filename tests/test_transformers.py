@@ -143,3 +143,38 @@ class TestCategoryTransformer:
             mapping={"USA": "US", "United States": "US"},
         )
         assert result_df["a"].tolist() == ["US", "US", "US"]
+
+
+class TestStandardizeDates:
+    def _mixed(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            {"d": ["2024-01-15", "01/20/2024", "Jan 30, 2024", None, "not a date"]}
+        )
+
+    def test_mixed_formats_are_standardized(self) -> None:
+        result_df, result = run_transformer(
+            "formats", self._mixed(), columns=["d"], operation="standardize_dates"
+        )
+        assert result_df["d"].tolist()[:3] == ["2024-01-15", "2024-01-20", "2024-01-30"]
+        assert pd.isna(result_df["d"].iloc[3])
+        assert result_df["d"].iloc[4] == "not a date"
+        assert result.rows_affected == 2
+
+    def test_generated_code_reproduces_transform(self) -> None:
+        df = self._mixed()
+        result_df, result = run_transformer(
+            "formats", df, columns=["d"], operation="standardize_dates"
+        )
+        namespace = {"pd": pd, "df": df.copy()}
+        exec(result.code, namespace)
+        pd.testing.assert_frame_equal(namespace["df"], result_df)
+
+    def test_types_datetime_parses_mixed_formats(self) -> None:
+        df = pd.DataFrame({"d": ["2024-01-15", "01/20/2024", "Jan 30, 2024"]})
+        result_df, result = run_transformer(
+            "types", df, columns=["d"], target_type="datetime"
+        )
+        assert result_df["d"].notna().all()
+        namespace = {"pd": pd, "df": df.copy()}
+        exec(result.code, namespace)
+        pd.testing.assert_frame_equal(namespace["df"], result_df)

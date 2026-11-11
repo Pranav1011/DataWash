@@ -45,11 +45,13 @@ class FormatTransformer(BaseTransformer):
                 affected += int((before != result_df[col]).sum())
             elif operation == "standardize_dates":
                 target_format = params.get("target_format", "%Y-%m-%d")
-                parsed = pd.to_datetime(result_df[col], errors="coerce")
-                affected += int(parsed.notna().sum())
+                before = result_df[col]
+                parsed = pd.to_datetime(before, errors="coerce", format="mixed")
                 result_df[col] = parsed.dt.strftime(target_format).where(
-                    parsed.notna(), result_df[col]
+                    parsed.notna(), before
                 )
+                unchanged = before.eq(result_df[col]) | before.isna()
+                affected += int((~unchanged).sum())
 
         return result_df, TransformationResult(
             transformer=self.name,
@@ -83,7 +85,8 @@ class FormatTransformer(BaseTransformer):
             elif operation == "standardize_dates":
                 fmt = params.get("target_format", "%Y-%m-%d")
                 lines.append(
-                    f"_parsed = pd.to_datetime(df[{repr(col)}], errors='coerce')"
+                    f"_parsed = pd.to_datetime(df[{repr(col)}], errors='coerce', "
+                    "format='mixed')"
                 )
                 lines.append(
                     f"df[{repr(col)}] = _parsed.dt.strftime({repr(fmt)})"
