@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -332,3 +335,19 @@ def test_suggest_mask_names_flag_adds_name_masking(tmp_path: Path) -> None:
         s.transformer == "pii" and s.params["columns"] == ["customer_name"]
         for s in report.suggestions
     )
+
+
+def test_codegen_stdout_is_clean_python_with_forced_color(tmp_path: Path) -> None:
+    """The progress spinner must not leak escape codes into piped code."""
+    src = tmp_path / "mixed.csv"
+    src.write_text(MIXED_DATES_CSV)
+    env = {**os.environ, "FORCE_COLOR": "1", "COLUMNS": "60"}
+    result = subprocess.run(
+        [sys.executable, "-m", "datawash.cli.main", "codegen", str(src)],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    assert "\x1b" not in result.stdout
+    assert result.stdout == Report(str(src)).generate_code()

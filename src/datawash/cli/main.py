@@ -20,6 +20,9 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+# Progress goes to stderr so `datawash codegen ... > file.py` stays clean
+# even when color is forced (e.g. FORCE_COLOR in CI)
+status_console = Console(stderr=True)
 
 
 def _fail(message: str) -> NoReturn:
@@ -33,7 +36,7 @@ def _load_report(file: Path, **kwargs: Any) -> Report:
     from datawash.core.report import Report
 
     try:
-        with console.status("Analyzing..."):
+        with status_console.status("Analyzing..."):
             return Report(str(file), **kwargs)
     except AdapterError as e:
         _fail(str(e))
