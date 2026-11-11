@@ -369,9 +369,7 @@ class Report:
             self.apply_all()
         applied = self._applied or []
         if not applied:
-            logger.warning(
-                "No transformations were applied; generated code is a no-op"
-            )
+            logger.warning("No transformations were applied; generated code is a no-op")
         return _generate_code(
             applied,
             style=style,
