@@ -178,3 +178,74 @@ class TestStandardizeDates:
         namespace = {"pd": pd, "df": df.copy()}
         exec(result.code, namespace)
         pd.testing.assert_frame_equal(namespace["df"], result_df)
+
+
+DATE_ORDER_CASES = {
+    "day_first": (
+        ["13/04/2024", "03/04/2024", "25/12/2023"],
+        ["2024-04-13", "2024-04-03", "2023-12-25"],
+        0,
+    ),
+    "month_first": (
+        ["04/13/2024", "03/04/2024", "2024-01-05"],
+        ["2024-04-13", "2024-03-04", "2024-01-05"],
+        0,
+    ),
+    "mixed_evidence": (
+        ["13/04/2024", "01/20/2024", "03/04/2024", "05/05/2024"],
+        ["2024-04-13", "2024-01-20", "03/04/2024", "2024-05-05"],
+        1,
+    ),
+    "all_ambiguous": (
+        ["03/04/2024", "2024-01-05", "Jan 30, 2024"],
+        ["03/04/2024", "2024-01-05", "2024-01-30"],
+        1,
+    ),
+    "demo_csv": (
+        ["2024-01-15", "01/20/2024", "2024-01-25", "2024-01-15", "Jan 30, 2024"],
+        ["2024-01-15", "2024-01-20", "2024-01-25", "2024-01-15", "2024-01-30"],
+        0,
+    ),
+}
+
+
+@pytest.mark.parametrize("case", DATE_ORDER_CASES)
+def test_standardize_dates_day_month_order(case: str) -> None:
+    values, expected, n_ambiguous = DATE_ORDER_CASES[case]
+    df = pd.DataFrame({"d": values})
+    result_df, result = run_transformer(
+        "formats", df, columns=["d"], operation="standardize_dates"
+    )
+    assert result_df["d"].tolist() == expected
+    changed = sum(v != e for v, e in zip(values, expected))
+    assert result.rows_affected == changed
+    if n_ambiguous:
+        assert result.warnings == [
+            f"{n_ambiguous} ambiguous date(s) in 'd' left unchanged: "
+            "could be day-first or month-first"
+        ]
+    else:
+        assert result.warnings == []
+
+    namespace = {"pd": pd, "df": df.copy()}
+    exec(result.code, namespace)
+    pd.testing.assert_frame_equal(namespace["df"], result_df)
+
+
+@pytest.mark.parametrize("case", DATE_ORDER_CASES)
+def test_types_datetime_day_month_order(case: str) -> None:
+    values, expected, n_ambiguous = DATE_ORDER_CASES[case]
+    df = pd.DataFrame({"d": values})
+    result_df, result = run_transformer(
+        "types", df, columns=["d"], target_type="datetime"
+    )
+    for got, want in zip(result_df["d"], expected):
+        if want[:4].isdigit() and want[4] == "-":
+            assert got.strftime("%Y-%m-%d") == want
+        else:
+            assert pd.isna(got)
+    assert len(result.warnings) == (1 if n_ambiguous else 0)
+
+    namespace = {"pd": pd, "df": df.copy()}
+    exec(result.code, namespace)
+    pd.testing.assert_frame_equal(namespace["df"], result_df)

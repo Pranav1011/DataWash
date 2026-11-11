@@ -8,6 +8,11 @@ import pandas as pd
 
 from datawash.core.models import TransformationResult
 from datawash.transformers.base import BaseTransformer
+from datawash.transformers.dates import (
+    PARSE_MIXED_DATES_SOURCE,
+    _parse_mixed_dates,
+    ambiguous_warning,
+)
 from datawash.transformers.registry import register_transformer
 
 
@@ -23,6 +28,7 @@ class TypeTransformer(BaseTransformer):
         target_type = params.get("target_type", "numeric")
         result_df = df.copy()
         affected = 0
+        warnings: list[str] = []
 
         for col in columns:
             if col not in result_df.columns:
@@ -49,10 +55,12 @@ class TypeTransformer(BaseTransformer):
                 result_df[col] = result_df[col].astype(str).str.lower().map(bool_map)
                 affected += len(result_df[col].dropna())
             elif target_type == "datetime":
-                result_df[col] = pd.to_datetime(
-                    result_df[col], errors="coerce", format="mixed"
-                )
+                result_df[col], ambiguous = _parse_mixed_dates(result_df[col])
                 affected += int(result_df[col].notna().sum())
+                if ambiguous.any():
+                    warnings.append(
+                        ambiguous_warning(col, int(ambiguous.sum()), "set to missing")
+                    )
             elif target_type == "string":
                 result_df[col] = result_df[col].astype(str)
                 affected += len(result_df[col])
@@ -63,12 +71,15 @@ class TypeTransformer(BaseTransformer):
             rows_affected=affected,
             columns_affected=columns,
             code=self.generate_code(**params),
+            warnings=warnings,
         )
 
     def generate_code(self, **params: Any) -> str:
         columns = params.get("columns", [])
         target_type = params.get("target_type", "numeric")
         lines = []
+        if target_type == "datetime" and columns:
+            lines.append(PARSE_MIXED_DATES_SOURCE)
         for col in columns:
             if target_type == "numeric":
                 lines.append(
@@ -87,8 +98,7 @@ class TypeTransformer(BaseTransformer):
                 )
             elif target_type == "datetime":
                 lines.append(
-                    f"df[{repr(col)}] = pd.to_datetime(df[{repr(col)}], "
-                    "errors='coerce', format='mixed')"
+                    f"df[{repr(col)}], _ = _parse_mixed_dates(df[{repr(col)}])"
                 )
             elif target_type == "string":
                 lines.append(f"df[{repr(col)}] = df[{repr(col)}].astype(str)")

@@ -76,3 +76,4 @@ class TransformationResult(BaseModel):
     rows_affected: int
     columns_affected: list[str] = Field(default_factory=list)
     code: str = ""
+    warnings: list[str] = Field(default_factory=list)

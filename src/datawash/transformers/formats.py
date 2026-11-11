@@ -8,6 +8,11 @@ import pandas as pd
 
 from datawash.core.models import TransformationResult
 from datawash.transformers.base import BaseTransformer
+from datawash.transformers.dates import (
+    PARSE_MIXED_DATES_SOURCE,
+    _parse_mixed_dates,
+    ambiguous_warning,
+)
 from datawash.transformers.registry import register_transformer
 
 
@@ -23,6 +28,7 @@ class FormatTransformer(BaseTransformer):
         operation = params.get("operation", "strip_whitespace")
         result_df = df.copy()
         affected = 0
+        warnings: list[str] = []
 
         for col in columns:
             if col not in result_df.columns:
@@ -46,12 +52,16 @@ class FormatTransformer(BaseTransformer):
             elif operation == "standardize_dates":
                 target_format = params.get("target_format", "%Y-%m-%d")
                 before = result_df[col]
-                parsed = pd.to_datetime(before, errors="coerce", format="mixed")
+                parsed, ambiguous = _parse_mixed_dates(before)
                 result_df[col] = parsed.dt.strftime(target_format).where(
                     parsed.notna(), before
                 )
                 unchanged = before.eq(result_df[col]) | before.isna()
                 affected += int((~unchanged).sum())
+                if ambiguous.any():
+                    warnings.append(
+                        ambiguous_warning(col, int(ambiguous.sum()), "left unchanged")
+                    )
 
         return result_df, TransformationResult(
             transformer=self.name,
@@ -59,12 +69,15 @@ class FormatTransformer(BaseTransformer):
             rows_affected=affected,
             columns_affected=columns,
             code=self.generate_code(**params),
+            warnings=warnings,
         )
 
     def generate_code(self, **params: Any) -> str:
         columns = params.get("columns", [])
         operation = params.get("operation", "strip_whitespace")
         lines = []
+        if operation == "standardize_dates" and columns:
+            lines.append(PARSE_MIXED_DATES_SOURCE)
         for col in columns:
             if operation == "strip_whitespace":
                 lines.append(
@@ -84,10 +97,7 @@ class FormatTransformer(BaseTransformer):
                 )
             elif operation == "standardize_dates":
                 fmt = params.get("target_format", "%Y-%m-%d")
-                lines.append(
-                    f"_parsed = pd.to_datetime(df[{repr(col)}], errors='coerce', "
-                    "format='mixed')"
-                )
+                lines.append(f"_parsed, _ = _parse_mixed_dates(df[{repr(col)}])")
                 lines.append(
                     f"df[{repr(col)}] = _parsed.dt.strftime({repr(fmt)})"
                     f".where(_parsed.notna(), df[{repr(col)}])"

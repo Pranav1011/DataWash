@@ -137,8 +137,10 @@ def clean(
     adapter.write(clean_df, output)
     console.print(f"Saved cleaned data to [bold]{output}[/]")
 
-    n_applied = len(report._applied or [])
-    format_transformation_summary(before_rows, len(clean_df), n_applied)
+    applied = report._applied or []
+    format_transformation_summary(before_rows, len(clean_df), len(applied))
+    for warning in (w for result in applied for w in result.warnings):
+        console.print(f"[yellow]Warning: {escape(warning)}[/]", soft_wrap=True)
 
     # Show before/after quality score
     score_before = report.last_score_before

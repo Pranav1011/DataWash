@@ -209,3 +209,20 @@ def test_unexpected_errors_still_surface(
     monkeypatch.setattr("datawash.core.report.Report.__init__", boom)
     result = runner.invoke(app, ["analyze", str(csv_file)])
     assert isinstance(result.exception, RuntimeError)
+
+
+def test_clean_warns_about_ambiguous_dates(tmp_path: Path) -> None:
+    src = tmp_path / "ambiguous.csv"
+    src.write_text(
+        "name,signup_date\n"
+        "A,13/04/2024\n"
+        "B,01/20/2024\n"
+        "C,03/04/2024\n"
+        "D,2024-02-01\n"
+        "E,2024-02-02\n"
+    )
+    output = tmp_path / "clean.csv"
+    result = runner.invoke(app, ["clean", str(src), "-o", str(output), "--apply-all"])
+    assert result.exit_code == 0
+    assert "1 ambiguous date(s) in 'signup_date' left unchanged" in result.output
+    assert "03/04/2024" in pd.read_csv(output)["signup_date"].tolist()

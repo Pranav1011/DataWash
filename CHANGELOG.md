@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Fixed
-- Date standardization now parses mixed formats (e.g. `2024-01-15`, `01/20/2024`, `Jan 30, 2024`) on pandas 2 and 3; previously only values matching the first format were converted. Generated code uses the same parsing, and "rows affected" counts only values that changed.
+- Date standardization now parses mixed formats (e.g. `2024-01-15`, `01/20/2024`, `Jan 30, 2024`) on pandas 2 and 3; previously only values matching the first format were converted. Numeric dates such as `03/04/2024` are read day-first or month-first per column, based on values that can only be read one way; when a column has no such evidence or both kinds, those dates are left unchanged and reported as a warning. Generated code uses the same parsing, and "rows affected" counts only values that changed.
 - CLI errors for missing, empty, unsupported or binary files and non-numeric `--apply` IDs now print one red line with a fix and exit with code 1, instead of a traceback.
 
 ### Changed
