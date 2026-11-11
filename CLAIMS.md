@@ -1,10 +1,12 @@
 # CLAIMS — DataWash
-Created 2026-09-05 (WO-1). Flagship. Cleanest claims in the portfolio — all VERIFIED.
 
-| Claim (as on resume/README) | Status | Evidence artifact | Reproduce | Verified |
+Each README claim, the evidence for it and how to reproduce it.
+
+| Claim (as in README) | Status | Evidence artifact | Reproduce | Verified |
 |---|---|---|---|---|
-| Authored & **published** open-source Python library for data-quality profiling + cleaning | VERIFIED | live on PyPI (pypi.org/project/datawash, author verified); `dist/` wheels; `pyproject.toml` | `pip install datawash` | 2026-09-05 |
-| Real profiling + cleaning (PII 6 cats, detectors, transformers, quality score, code-gen) | VERIFIED | `src/datawash/{detectors,transformers,profiler,codegen}/` (~5,221 LOC) | run CLI | 2026-09-05 |
-| Test rigor (~92% coverage) | VERIFIED | 20 test files, ~232 test fns, `.coverage` | `pytest` | 2026-09-05 |
-
-**Only fix:** README labels `[ml]` extra "coming soon" but the ML code (`src/datawash/ml/`) already ships — drop the label.
+| Published open-source Python library for data-quality profiling + cleaning | VERIFIED (1.0.0 on PyPI; 1.1.0, which adds `[ml]`, not yet published) | pypi.org/project/datawash; `pyproject.toml` | `pip install datawash` | 2026-11-11 |
+| Profiling + cleaning (7 detectors + opt-in fuzzy duplicates, 7 transformers, quality score, code generation) | VERIFIED | `src/datawash/{detectors,transformers,profiler,codegen}/` | `datawash clean examples/sample_data/customers_messy.csv -o clean.csv --apply-all --codegen clean.py` | 2026-11-11 |
+| Quality score 48 → 83 on `customers_messy.csv`; generated code reproduces `clean.csv` | VERIFIED | `tests/test_cli.py` (codegen replay tests) | command above, then run `clean.py` | 2026-11-11 |
+| 296 tests pass, 26 skipped (ML dependencies not installed) | VERIFIED | `tests/` | `pytest` | 2026-11-11 |
+| 82% line coverage | VERIFIED | — | `pytest --cov=datawash` on a `[dev]` install | 2026-11-11 |
+| Performance table (e.g. 1M x 10 in 1.10s on an M3 Pro) | VERIFIED | `tests/benchmark_readme.py` | `python tests/benchmark_readme.py` | 2026-11-11 |

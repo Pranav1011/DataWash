@@ -58,7 +58,7 @@ report = analyze(df, use_case="ml")
 config = {
     "detectors": {
         # Which detectors to run
-        "enabled": ["missing", "duplicates", "format", "outliers", "types", "similarity"],
+        "enabled": ["missing", "duplicates", "formats", "outliers", "types", "similarity", "pii"],
 
         # Outlier detection method
         "outlier_method": "iqr",  # or "zscore"
@@ -67,7 +67,7 @@ config = {
         "outlier_threshold": 1.5,  # IQR multiplier or Z-score
 
         # Column similarity threshold
-        "min_similarity": 0.8,  # 0.0 to 1.0
+        "similarity_name_threshold": 0.8,  # 0.0 to 1.0
     }
 }
 ```
@@ -88,10 +88,11 @@ config = {
 Available detectors:
 - `missing` - Null values, empty strings
 - `duplicates` - Exact duplicate rows
-- `format` - Case, dates, whitespace
+- `formats` - Case, dates, whitespace
 - `outliers` - Statistical anomalies
 - `types` - Type mismatches
 - `similarity` - Similar column names
+- `pii` - Emails, phones, SSNs, credit cards, IPs, ZIP codes, PII-like column names
 
 #### Outlier Detection
 
@@ -124,7 +125,7 @@ Values with Z-score > 3.0 (or < -3.0) are flagged.
 ```python
 config = {
     "detectors": {
-        "min_similarity": 0.8,  # 80% similar names flagged
+        "similarity_name_threshold": 0.8,  # 80% similar names flagged
     }
 }
 ```
@@ -137,9 +138,17 @@ Uses Levenshtein distance to compare column names.
 config = {
     "suggestions": {
         "max_suggestions": 50,  # Maximum suggestions to return
+        "mask_names": False,  # Also mask columns like 'customer_name'
     }
 }
 ```
+
+PII columns (emails, phones, SSNs and so on) get a masking suggestion, and it
+runs after whitespace, case and type fixes so the masked text is the cleaned
+value. PII columns are never filled from other rows, since that would copy one
+person's email or phone onto another. Columns flagged only because their name
+looks like a person's name (`name`, `first_name`, `last_name`, `full_name`) are
+not masked unless `mask_names` is `True` (CLI: `--mask-names`).
 
 ### Code Generation Configuration
 
@@ -277,7 +286,7 @@ Speed up analysis by skipping irrelevant detectors:
 
 ```python
 # Skip similarity check for datasets with unique column names
-config = {"detectors": {"enabled": ["missing", "duplicates", "format", "outliers", "types"]}}
+config = {"detectors": {"enabled": ["missing", "duplicates", "formats", "outliers", "types"]}}
 ```
 
 ### 5. Limit Suggestions for Large Datasets

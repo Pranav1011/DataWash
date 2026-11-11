@@ -4,14 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [1.1.0] - Unreleased
+
+### Added
+- ML-powered semantic duplicate detection (`analyze(..., ml_features=True)`, needs `pip install "datawash[ml]>=1.1.0"`).
+- `--mask-names` CLI flag and `suggestions.mask_names` config: masking columns that are PII only because of a name-like column name is now opt-in.
+- `analyze` shows the data quality score; `analyze` and `codegen` accept `--use-case`.
+- `tests/benchmark_readme.py` reproduces the README performance table.
 
 ### Fixed
+- `datawash codegen` printed generated code as Rich markup and crashed with `MarkupError` on code containing brackets such as `[/.-]`; it now prints plain text, which also stops long lines being wrapped.
+- PII masking ran before whitespace, case and fill fixes, so padded names were masked with their padding and missing emails were filled with already-masked values. Masking now runs after all value fixes, PII columns are never filled from other rows, and empty strings in them become missing.
+- `clean` and `codegen` exit with code 1 on suggestion IDs that do not exist (e.g. `--apply 999`) instead of writing unchanged output; generated code always defines `clean_data()`.
+- The example CSVs quote dates that contain commas, so `csv_cleaning.py` and `ml_preprocessing.py` run again; example docstrings use `--apply` (there is no `--ids` flag).
+- Whitespace findings count padded values once, not once per side; messages use "1 missing value", readable date formats (`NN/NN/YYYY` instead of `slash_mdy`) and B/KB/MB sizes.
 - Date standardization now parses mixed formats (e.g. `2024-01-15`, `01/20/2024`, `Jan 30, 2024`) on pandas 2 and 3; previously only values matching the first format were converted. Numeric dates such as `03/04/2024` are read day-first or month-first per column, based on values that can only be read one way; when a column has no such evidence or both kinds, those dates are left unchanged and reported as a warning. Generated code uses the same parsing, and "rows affected" counts only values that changed.
 - CLI errors for missing, empty, unsupported or binary files and non-numeric `--apply` IDs now print one red line with a fix and exit with code 1, instead of a traceback.
 
 ### Changed
 - Minimum pandas version raised to 2.0 (needed for `format="mixed"` date parsing).
+- The suggestions table shows the finding behind each suggestion instead of repeated impact and rationale text.
+- Removed the `--sample` and `--verbose` options of `analyze`, which had no effect.
 
 ## [1.0.0] - 2026-02-07
 

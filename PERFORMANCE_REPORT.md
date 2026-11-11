@@ -1,5 +1,8 @@
 # DataWash Performance Benchmark Report
 
+> Historical report from 2026-02-03, before the 0.2.0 optimizations. For current
+> numbers see the Performance section of the README (`python tests/benchmark_readme.py`).
+
 ## Environment
 - **Python**: 3.12
 - **Platform**: macOS (Darwin)

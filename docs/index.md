@@ -42,11 +42,11 @@ print(report.generate_code())
 
 ## Features
 
-- **6 Detectors**: Missing values, duplicates, formats, outliers, types, similarity
-- **6 Transformers**: Missing handling, deduplication, type conversion, formatting, columns, categories
+- **7 Detectors**: Missing values, duplicates, formats, outliers, types, similarity, PII (plus opt-in semantic duplicates with `datawash[ml]`)
+- **7 Transformers**: Missing handling, deduplication, type conversion, formatting, columns, categories, PII masking
 - **Smart Suggestions**: Conflict resolution, execution ordering, use-case awareness
 - **Code Generation**: Reproducible Python code in function or script style
-- **Rich CLI**: Colored output, progress bars, interactive mode
+- **Rich CLI**: `analyze`, `suggest`, `clean` and `codegen` with colored tables (interactive review is `report.apply_interactive()` in Python)
 - **Jupyter Support**: HTML rendering in notebooks
 
 ## Installation

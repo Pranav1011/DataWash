@@ -16,7 +16,7 @@ pip install datawash
 # For Parquet and Excel file support
 pip install datawash[formats]
 
-# For ML-powered features (coming soon)
+# ML-powered semantic duplicate detection (needs datawash 1.1.0)
 pip install datawash[ml]
 
 # All optional dependencies
@@ -38,7 +38,7 @@ pip install -e .
 
 ```python
 import datawash
-print(datawash.__version__)  # Should print "0.1.0"
+print(datawash.__version__)  # Should print "1.1.0"
 ```
 
 Or from command line:

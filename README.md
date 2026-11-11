@@ -1,46 +1,40 @@
 # DataWash
 
 <p align="center">
-  <strong>Intelligent data cleaning and quality analysis for Python</strong>
+  <strong>Find the problems in a messy CSV, fix them, and get the pandas code that fixed them.</strong>
 </p>
 
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="#features">Features</a> •
-  <a href="#documentation">Documentation</a> •
-  <a href="#examples">Examples</a>
+  <a href="#architecture">Architecture</a> •
+  <a href="#design-decisions-and-limitations">Limitations</a> •
+  <a href="#documentation">Documentation</a>
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0">
   <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue" alt="Python">
-  <img src="https://img.shields.io/badge/coverage-92%25-brightgreen" alt="Coverage">
-  <img src="https://img.shields.io/badge/tests-194%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-296%20passed%2C%2026%20skipped-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/coverage-82%25-green" alt="Coverage">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
 
 ---
 
-DataWash analyzes your tabular data, detects quality issues, suggests prioritized fixes, and generates reproducible Python code — all in a few lines of code.
+DataWash is a Python library and CLI for tabular data quality. It profiles a
+dataset, finds issues (missing values, mixed date formats, padded or
+inconsistently cased text, booleans stored as strings, outliers, duplicate rows
+and columns, PII), ranks fix suggestions, applies the ones you pick, and writes
+the equivalent pandas code so the cleaning can be reviewed and rerun without
+DataWash.
 
-```python
-from datawash import analyze
+On the bundled `examples/sample_data/customers_messy.csv` (30 rows, 8 columns),
+`--apply-all` raises the quality score from 48 to 83, turns four date formats
+into ISO dates, converts `yes`/`TRUE`/`0` to booleans and masks emails and
+phone numbers. The saved `clean.py` reproduces `clean.csv` exactly.
 
-report = analyze("messy_data.csv")
-print(f"Quality Score: {report.quality_score}/100")
-clean_df = report.apply_all()
-print(report.generate_code())
-```
-
-## Why DataWash?
-
-| Problem | DataWash Solution |
-|---------|-------------------|
-| Missing values silently break ML models | Automatic detection + smart filling strategies |
-| Inconsistent date formats cause parsing errors | Detects and standardizes to ISO format |
-| Duplicate rows inflate statistics | Identifies and removes exact duplicates |
-| Boolean values stored as "yes"/"no" strings | Converts to proper boolean type |
-| Manual data cleaning is tedious and error-prone | Generates reproducible Python code |
+![datawash suggest and clean on customers_messy.csv](https://raw.githubusercontent.com/Pranav1011/DataWash/main/docs/images/demo.png)
 
 ## Installation
 
@@ -48,145 +42,186 @@ print(report.generate_code())
 pip install datawash
 ```
 
-**Optional extras:**
+Optional extras:
 
 ```bash
-pip install datawash[formats]  # Parquet + Excel support
-pip install datawash[ml]       # ML-powered semantic duplicate detection
-pip install datawash[all]      # All optional dependencies
-pip install datawash[dev]      # Development tools
+pip install "datawash[formats]"       # Parquet + Excel support
+pip install "datawash[ml]>=1.1.0"     # Semantic (embedding-based) duplicate rows
+pip install "datawash[dev]"           # pytest, pytest-cov, black, ruff, mypy
+```
+
+The ML code ships in version 1.1.0, so `[ml]` needs 1.1.0 or later. To install
+this repository's code directly:
+
+```bash
+git clone https://github.com/Pranav1011/DataWash.git
+cd DataWash
+pip install -e .
 ```
 
 ## Quick Start
+
+### Command line
+
+Run these from the repository root:
+
+```bash
+# Quality score, column profiles, issues and suggestions
+datawash analyze examples/sample_data/customers_messy.csv
+
+# Ranked suggestions with IDs
+datawash suggest examples/sample_data/customers_messy.csv
+
+# Apply all (or --apply 1,3,5), save the result and the code that produced it
+datawash clean examples/sample_data/customers_messy.csv -o clean.csv --apply-all --codegen clean.py
+
+# Print the pandas code without writing data
+datawash codegen examples/sample_data/customers_messy.csv
+```
+
+`clean` and `codegen` stop with an error if an `--apply` ID is not in the
+suggestion list. IDs depend on `--use-case`, so use the same value for `suggest`
+and `clean`.
 
 ### Python API
 
 ```python
 from datawash import analyze
 
-# 1. Analyze your data (sampling enabled by default for large datasets)
-report = analyze("data.csv")  # or pass a DataFrame
+report = analyze("examples/sample_data/customers_messy.csv")  # or a DataFrame
 
-# 2. Check quality score
-print(f"Quality Score: {report.quality_score}/100")
-print(f"Issues Found: {len(report.issues)}")
-
-# 3. Review suggestions
+print(f"Quality score: {report.quality_score}/100")   # 48
 for s in report.suggestions:
-    print(f"[{s.id}] {s.action}")
+    print(f"[{s.id}] {s.priority.value:<6} {s.action}")
 
-# 4. Apply all fixes
-clean_df = report.apply_all()
-
-# 5. Or apply selectively
-clean_df = report.apply([1, 3, 5])  # by suggestion ID
-
-# 6. Generate reproducible code
-print(report.generate_code())
-
-# Disable sampling for exact results on large datasets
-report = analyze("data.csv", sample=False)
-
-# Disable parallel processing
-report = analyze("data.csv", parallel=False)
+clean_df = report.apply_all()          # or report.apply([1, 3, 5])
+print(report.last_score_before, "->", report.last_score_after)  # 48 -> 83
+print(report.generate_code())          # defines clean_data(df)
 ```
 
-### Command Line
-
-```bash
-# Analyze and see quality report
-datawash analyze data.csv
-
-# Get prioritized suggestions
-datawash suggest data.csv --use-case ml
-
-# Clean and export
-datawash clean data.csv -o clean.csv --apply-all
-
-# Generate Python code
-datawash codegen data.csv --apply-all
-```
+Options: `analyze(..., use_case="ml")` re-ranks suggestions,
+`sample=False` profiles every row, `parallel=False` runs single-threaded,
+`ml_features=True` adds semantic duplicate detection (needs `[ml]`).
 
 ## Features
 
-### Data Quality Detection
-
-| Detector | What It Finds |
+| Detector | What it finds |
 |----------|---------------|
-| **Missing** | Null values, empty strings, whitespace-only values |
+| **Missing** | Nulls, empty and whitespace-only strings |
 | **Duplicates** | Exact duplicate rows |
-| **Formats** | Mixed case, inconsistent dates, whitespace padding |
-| **Outliers** | Statistical anomalies (IQR or Z-score) |
-| **Types** | Numbers/booleans stored as strings |
-| **Similarity** | Potentially duplicate columns |
-| **PII** | Emails, SSNs, phones, credit cards, IP addresses |
-
-### Smart Transformations
+| **Formats** | Mixed case, mixed date formats, leading/trailing whitespace |
+| **Outliers** | IQR or Z-score outliers in numeric columns |
+| **Types** | Numbers and booleans stored as strings |
+| **Similarity** | Columns with similar names or values (MinHash + LSH) |
+| **PII** | Emails, SSNs, phone numbers, credit cards (Luhn-checked), IPv4, ZIP codes, PII-like column names |
+| **Fuzzy duplicates** (opt-in, `[ml]`) | Rows that mean the same thing, via sentence embeddings |
 
 | Transformer | Operations |
 |-------------|------------|
-| **Missing** | Drop rows, fill with median/mode/value, clean empty strings |
-| **Duplicates** | Remove exact duplicates |
-| **Types** | Convert to numeric, boolean, datetime |
-| **Formats** | Standardize case, dates, strip whitespace |
-| **Columns** | Drop, rename, merge columns |
+| **Missing** | Drop rows, fill with median/mode/value, empty strings to missing, clip outliers |
+| **Duplicates** | Drop exact duplicates |
+| **Types** | To numeric, boolean, datetime |
+| **Formats** | Strip, lower/upper/title case, standardize dates to ISO |
+| **Columns** | Drop, rename, merge |
 | **Categories** | Normalize categorical values |
-| **PII** | Mask, hash, redact, or generalize sensitive data |
+| **PII** | Mask, hash, redact, generalize |
 
-### Intelligent Suggestion System
+Every transformer returns the pandas code for what it did, and
+`generate_code(style="function" | "script")` joins them into one file.
 
-- **Conflict Resolution**: Automatically prevents conflicting transformations
-- **Execution Ordering**: Applies fixes in optimal order (6 phases)
-- **Use-Case Aware**: Priorities adjust for ML, analytics, or export workflows
-- **Contextual Rationale**: Every suggestion explains why it's recommended
+## Architecture
 
-### Code Generation
+Everything runs in one Python process on a pandas DataFrame; there is no
+server or database.
 
-```python
-# Generate a reusable cleaning function
-code = report.generate_code(style="function")
-
-# Or a standalone script
-code = report.generate_code(style="script")
 ```
+file / DataFrame
+  └─ adapters (CSV, JSON, Parquet, Excel) ──> DataFrame
+       └─ dtype optimizer (numeric downcasting)
+            └─ SmartSampler: ≥50K rows → ~10K-row sample for analysis
+                 ├─ profiler: per-column stats (threads when >5K rows or >20 cols)
+                 └─ detectors (7 built-in, +1 with ml_features) ──> Findings
+                      └─ suggestion engine ──> ranked Suggestions with IDs
+                           (PII dedupe, conflict exclusion, use-case boost)
+Report.apply(ids)
+  └─ suggestions sorted into execution phases, run on the FULL DataFrame:
+     1 duplicates / drop rows → 2 strip + case → 3 fills → 4 type conversion
+     → 5 outlier clipping → 6 PII masking → 7 column operations
+       └─ each transformer returns (new DataFrame, TransformationResult with code)
+            ├─ codegen: concatenates the code into clean_data(df) or a script
+            └─ re-analysis of the result ──> score after
+CLI (typer + rich): analyze | suggest | clean | codegen, thin wrappers over Report
+```
+
+The quality score is `100 − Σ(severity penalty × confidence)` over the findings,
+with penalties of 10 (high), 5 (medium) and 2 (low), clamped to 0–100
+(`Report._score_findings`).
+
+## Design decisions and limitations
+
+- **In-memory and single process.** The whole file is loaded into pandas;
+  files larger than RAM are not supported. Parallelism is a thread pool for
+  profiling and detection only.
+- **Sampling.** At 50K rows or more, issues are found on a ~10K-row sample, so
+  counts in messages are estimates; transformations always run on every row.
+  `sample=False` turns this off.
+- **The quality score is a heuristic.** It counts findings weighted by severity
+  and confidence; it is not validated against human judgments and is not
+  comparable across datasets.
+- **PII handling.** Detection is regex plus column-name heuristics, so expect
+  misses and false positives. Masking keeps the last 4 characters (`****.com`),
+  which reduces exposure but is not anonymization; use `hash` or `redact` when
+  that matters. Masking runs after other fixes so it masks cleaned values. PII
+  columns are never filled from other rows (that would copy one person's email
+  onto another), and empty strings in them become missing. Columns that are PII
+  only because of a name-like column name (`name`, `first_name`, …) are masked
+  only with `--mask-names` / `config={"suggestions": {"mask_names": True}}`.
+- **Suggestion IDs are positions in a ranked list.** They change with
+  `--use-case` and `--mask-names`, so pass the same flags to `suggest` and
+  `clean`.
+- **Dates.** Numeric dates like `03/04/2024` are read day- or month-first per
+  column from values that can only be read one way; when a column gives no such
+  evidence, those values are left unchanged and reported as a warning.
+- **Small samples.** Outlier detection uses IQR, so a single extreme value in a
+  tiny column (e.g. `age=150` in 5 rows) may not be flagged.
+- **Generated code** repeats helper functions for each column and is meant to be
+  read and edited, not to be minimal.
+- **ML features are optional.** Fuzzy duplicate detection is off by default and
+  needs `[ml]` (sentence-transformers). Its 26 tests are skipped without those
+  dependencies, which is why the test run reports 26 skipped.
 
 ## Performance
 
-DataWash v0.2.0 is optimized for large datasets:
+Median of three `analyze()` runs on synthetic data from
+`tests/validate_performance.py` (seed 42), measured on an Apple M3 Pro
+(11 cores), Python 3.12, datawash 1.1.0:
 
-| Dataset | Time | Throughput |
-|---------|------|------------|
-| 1M rows x 10 cols | 0.72s | 1.4M rows/sec |
-| 100K rows x 50 cols | 2.13s | 47K rows/sec |
-| 10K rows x 100 cols | 4.35s | 2.3K rows/sec |
-| 1M rows x 50 cols | 3.24s | 309K rows/sec |
-| 50K rows x 250 cols | 9.99s | 5K rows/sec |
+| Dataset | `analyze()` time | Sampled |
+|---------|------------------|---------|
+| 1M rows x 10 cols | 1.10s | yes |
+| 100K rows x 50 cols | 3.65s | yes |
+| 10K rows x 100 cols | 7.46s | no |
+| 1M rows x 50 cols | 5.72s | yes |
+| 50K rows x 250 cols | 17.39s | yes |
 
-**Optimizations include:**
-- Smart sampling for datasets >=50K rows (10-20x speedup)
-- Parallel column profiling and detection
-- 31% memory reduction via dtype optimization
-- O(n) similarity detection with MinHash + LSH
+Reproduce with `python tests/benchmark_readme.py` (about 2 minutes). Because
+large inputs are sampled, time grows with the number of columns much more than
+with rows; these are not per-row throughput numbers. `apply()` time is not
+included.
 
 ## Examples
 
-We provide ready-to-run examples in the `examples/` directory:
-
 | Example | Description |
 |---------|-------------|
-| [`quickstart.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/quickstart.py) | Basic workflow: analyze → suggest → apply → codegen |
-| [`csv_cleaning.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/csv_cleaning.py) | Load CSV, clean, save with CLI equivalents |
-| [`ml_preprocessing.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/ml_preprocessing.py) | ML-optimized cleaning workflow |
-| [`jupyter_demo.ipynb`](https://github.com/Pranav1011/DataWash/blob/main/examples/jupyter_demo.ipynb) | Interactive notebook with visualizations |
-
-**Sample datasets** in `examples/sample_data/`:
-- `customers_messy.csv` - Names, emails, phones with various issues
-- `orders_messy.csv` - Dates, amounts, categories with inconsistencies
-- `employees_messy.csv` - Mixed types, duplicates, outliers
+| [`quickstart.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/quickstart.py) | Analyze → suggest → apply → codegen on a small in-memory DataFrame |
+| [`csv_cleaning.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/csv_cleaning.py) | Clean `customers_messy.csv` selectively and save CSV + code to `examples/output/` |
+| [`ml_preprocessing.py`](https://github.com/Pranav1011/DataWash/blob/main/examples/ml_preprocessing.py) | Compare `general` and `ml` use cases on `employees_messy.csv` |
+| [`jupyter_demo.ipynb`](https://github.com/Pranav1011/DataWash/blob/main/examples/jupyter_demo.ipynb) | Notebook walkthrough with charts |
 
 ```bash
-# Run an example
 python examples/quickstart.py
+python examples/csv_cleaning.py
+python examples/ml_preprocessing.py
 ```
 
 ## Documentation
@@ -194,109 +229,67 @@ python examples/quickstart.py
 | Document | Description |
 |----------|-------------|
 | [Getting Started](https://github.com/Pranav1011/DataWash/blob/main/docs/getting-started.md) | Installation and first steps |
-| [User Guide](https://github.com/Pranav1011/DataWash/blob/main/docs/user-guide.md) | Complete feature walkthrough |
-| [API Reference](https://github.com/Pranav1011/DataWash/blob/main/docs/api-reference.md) | Detailed API documentation |
-| [CLI Reference](https://github.com/Pranav1011/DataWash/blob/main/docs/cli-reference.md) | Command-line interface guide |
-| [Configuration](https://github.com/Pranav1011/DataWash/blob/main/docs/configuration.md) | Customization options |
+| [User Guide](https://github.com/Pranav1011/DataWash/blob/main/docs/user-guide.md) | Feature walkthrough |
+| [API Reference](https://github.com/Pranav1011/DataWash/blob/main/docs/api-reference.md) | Python API |
+| [CLI Reference](https://github.com/Pranav1011/DataWash/blob/main/docs/cli-reference.md) | Every command and option |
+| [Configuration](https://github.com/Pranav1011/DataWash/blob/main/docs/configuration.md) | Config options |
 | [Contributing](https://github.com/Pranav1011/DataWash/blob/main/docs/contributing.md) | How to contribute |
 
-## Use Cases
-
-Choose a use case to get optimized suggestions:
-
-```python
-report = analyze(df, use_case="ml")  # or "general", "analytics", "export"
-```
-
-| Use Case | Prioritizes |
-|----------|-------------|
-| `general` | Balanced approach for exploration |
-| `ml` | Duplicates, missing values, type conversions |
-| `analytics` | Consistency, date formats, outliers |
-| `export` | Format standardization, clean values |
-
-## Configuration
+## Use cases and configuration
 
 ```python
 report = analyze(
     "data.csv",
-    use_case="ml",
+    use_case="ml",  # "general", "analytics" or "export"
     config={
         "detectors": {
             "outlier_method": "zscore",  # or "iqr"
             "outlier_threshold": 2.5,
-            "min_similarity": 0.8,
+            "similarity_name_threshold": 0.8,
         },
-        "suggestions": {
-            "max_suggestions": 20,
-        },
+        "suggestions": {"max_suggestions": 20, "mask_names": False},
     },
 )
 ```
 
-## Project Status
+| Use case | Raises the priority of |
+|----------|------------------------|
+| `general` | Nothing (severity only) |
+| `ml` | Duplicate rows, fuzzy duplicates, missing values, numbers stored as strings, similar columns |
+| `analytics` | Missing values, outliers, date formats |
+| `export` | Date formats, whitespace, numbers stored as strings |
 
-| Metric | Value |
-|--------|-------|
-| Source Code | ~3,200 lines |
-| Test Code | ~2,400 lines |
-| Tests | 194 passing |
-| Coverage | ~92% |
-| Python | 3.10, 3.11, 3.12 |
-| Platforms | Linux, macOS, Windows |
+## Project status
 
-### What's Working
+| Metric | Value | Command |
+|--------|-------|---------|
+| Version | 1.1.0 | `pyproject.toml` |
+| Tests | 296 passed, 26 skipped (ML deps not installed) | `pytest` |
+| Coverage | 82% of `src/datawash` | `pytest --cov=datawash` on a `[dev]` install |
+| Python | 3.10, 3.11, 3.12 | |
 
-- ✅ Multi-format loading (CSV, JSON, Parquet, Excel)
-- ✅ Comprehensive profiling and statistics
-- ✅ 7 detectors for common data quality issues
-- ✅ 7 transformers with multiple operations each
-- ✅ PII detection and masking (emails, SSNs, phones, credit cards)
-- ✅ Smart suggestion system with conflict resolution
-- ✅ Reproducible Python code generation
-- ✅ Rich CLI with colored output
-- ✅ Jupyter notebook support
-
-### What's Next
-
-- ML-powered semantic similarity detection
-- Fuzzy duplicate detection for near-duplicate rows
-- Advanced imputation (KNN, MICE)
-- Cloud storage connectors (S3, BigQuery)
-- Schema validation for expected column types and constraints
+Next: advanced imputation (KNN, MICE), cloud storage connectors, schema
+validation, and stable suggestion IDs across use cases.
 
 ## Requirements
 
 - **Python** >= 3.10
-- **Core**: pandas, numpy, pydantic, rich, typer, scikit-learn
-- **Optional**: pyarrow (Parquet), openpyxl (Excel)
+- **Core**: pandas >= 2.0, numpy, pydantic >= 2, rich, typer
+- **Optional**: pyarrow and openpyxl (`[formats]`); sentence-transformers,
+  faiss-cpu, datasketch, scikit-learn, python-Levenshtein (`[ml]`)
 
 ## Development
 
 ```bash
-# Clone and install
 git clone https://github.com/Pranav1011/DataWash.git
 cd DataWash
-pip install -e ".[dev,all]"
+pip install -e ".[dev]"
 
-# Run tests
-pytest
-
-# Format code
+pytest                       # 296 passed, 26 skipped
+pytest --cov=datawash        # 82%
 black src tests
 ruff check src tests
 ```
-
-## Contributing
-
-Contributions welcome! See [CONTRIBUTING.md](https://github.com/Pranav1011/DataWash/blob/main/docs/contributing.md) for guidelines.
-
-**Areas where help is needed:**
-- ML module implementation (sentence-transformers)
-- Additional detectors (schema validation, fuzzy duplicates)
-- Performance optimization
-- Documentation and examples
-- Cloud connectors
 
 ## License
 
@@ -304,4 +297,4 @@ MIT License - see [LICENSE](https://github.com/Pranav1011/DataWash/blob/main/LIC
 
 ## Acknowledgments
 
-Built with [pandas](https://pandas.pydata.org/), [pydantic](https://pydantic-docs.helpmanual.io/), [rich](https://rich.readthedocs.io/), [typer](https://typer.tiangolo.com/), and [scikit-learn](https://scikit-learn.org/).
+Built with [pandas](https://pandas.pydata.org/), [pydantic](https://docs.pydantic.dev/), [rich](https://rich.readthedocs.io/) and [typer](https://typer.tiangolo.com/).

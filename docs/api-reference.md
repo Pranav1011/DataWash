@@ -317,10 +317,11 @@ class Config:
 
 ```python
 class DetectorConfig:
-    enabled: list[str] = ["missing", "duplicates", "format", "outliers", "types", "similarity"]
+    enabled: list[str] = ["missing", "duplicates", "formats", "outliers", "types", "similarity", "pii"]
     outlier_method: str = "iqr"  # or "zscore"
     outlier_threshold: float = 1.5
-    min_similarity: float = 0.8
+    similarity_name_threshold: float = 0.8
+    similarity_value_threshold: float = 0.7
 ```
 
 ### SuggestionConfig
@@ -328,6 +329,7 @@ class DetectorConfig:
 ```python
 class SuggestionConfig:
     max_suggestions: int = 50
+    mask_names: bool = False  # also suggest masking name-like columns
 ```
 
 ### CodegenConfig

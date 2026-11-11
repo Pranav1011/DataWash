@@ -1,366 +1,197 @@
 # CLI Reference
 
-DataWash provides a command-line interface for quick data analysis and cleaning.
-
-## Installation
-
-The CLI is installed automatically with DataWash:
+DataWash installs a `datawash` command with four subcommands. Every option
+below matches `datawash <command> --help`. The output samples come from
+`examples/sample_data/customers_messy.csv` (30 rows, 8 columns).
 
 ```bash
 pip install datawash
-```
-
-Verify installation:
-
-```bash
 datawash --help
 ```
 
-## Commands Overview
-
 | Command | Description |
 |---------|-------------|
-| `analyze` | Analyze a dataset and show quality report |
-| `suggest` | Show prioritized cleaning suggestions |
-| `clean` | Clean a dataset and optionally save output |
-| `codegen` | Generate Python cleaning code |
+| `analyze` | Quality score, column profiles, issues and suggestions |
+| `suggest` | Prioritized cleaning suggestions with their IDs |
+| `clean` | Apply suggestions and write the cleaned file |
+| `codegen` | Print or save the pandas code for the applied suggestions |
+
+Suggestion IDs depend on `--use-case` and `--mask-names`, so pass the same
+values to `suggest` and to `clean` / `codegen`.
 
 ---
 
 ## datawash analyze
 
-Analyze a dataset and display a quality report.
-
-### Usage
-
 ```bash
-datawash analyze <FILE> [OPTIONS]
+datawash analyze FILE [OPTIONS]
 ```
-
-### Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `FILE` | Path to the data file (CSV, JSON, Parquet, Excel) |
-
-### Options
 
 | Option | Description |
 |--------|-------------|
-| `--use-case`, `-u` | Use case: general, ml, analytics, export (default: general) |
-| `--help` | Show help message |
+| `FILE` | Data file: CSV, JSON, Parquet or Excel (Parquet and Excel need `datawash[formats]`) |
+| `--use-case`, `-u` | `general` (default), `ml`, `analytics` or `export` |
+| `--mask-names` | Also suggest masking name columns such as `customer_name` |
+| `--help` | Show help |
 
-### Examples
-
-```bash
-# Basic analysis
-datawash analyze data.csv
-
-# With ML use case
-datawash analyze data.csv --use-case ml
-
-# Short form
-datawash analyze data.csv -u ml
-```
-
-### Output
+Output (first panel):
 
 ```
-DataWash Analysis Report
-========================
-
-Dataset: 1000 rows x 10 columns
-Memory: 0.5 MB
-Duplicate rows: 15
-
-Data Quality Score: 72/100
-
-Issues Found: 8
-  [HIGH] 3 issue(s)
-    - Column 'email' has 50 missing values (5.0%)
-    - Column 'age' has numeric values stored as strings
-    - 15 duplicate rows detected
-  [MEDIUM] 3 issue(s)
-    ...
-  [LOW] 2 issue(s)
-    ...
-
-Suggestions: 8
-Run 'datawash suggest data.csv' to see detailed suggestions.
+╭──────────────────────── Dataset Overview ────────────────────────╮
+│ Data quality score: 48/100                                       │
+│ 30 rows x 8 columns | Memory: 3.3 KB | Duplicate rows: 0         │
+╰──────────────────────────────────────────────────────────────────╯
 ```
+
+It then prints the column profiles, the issues table and the suggestions table.
 
 ---
 
 ## datawash suggest
 
-Show prioritized cleaning suggestions.
-
-### Usage
-
 ```bash
-datawash suggest <FILE> [OPTIONS]
+datawash suggest FILE [OPTIONS]
 ```
-
-### Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `FILE` | Path to the data file |
-
-### Options
 
 | Option | Description |
 |--------|-------------|
-| `--use-case`, `-u` | Use case: general, ml, analytics, export |
-| `--priority`, `-p` | Filter by priority: high, medium, low |
-| `--limit`, `-l` | Maximum suggestions to show (default: all) |
-| `--help` | Show help message |
-
-### Examples
+| `--use-case`, `-u` | `general` (default), `ml`, `analytics` or `export` |
+| `--priority`, `-p` | `high`, `medium`, `low` or `all` (default) |
+| `--limit`, `-l` | Maximum suggestions to show (default: 20) |
+| `--mask-names` | Also suggest masking name columns |
+| `--help` | Show help |
 
 ```bash
-# All suggestions
-datawash suggest data.csv
-
-# High priority only
 datawash suggest data.csv --priority high
-
-# ML use case, top 5
 datawash suggest data.csv -u ml -l 5
 ```
 
-### Output
+Output (trimmed):
 
 ```
-DataWash Suggestions
-====================
-
-Quality Score: 72/100
-Suggestions: 8
-
-ID  Priority  Action
---  --------  ------
-1   high      Remove 15 duplicate rows
-2   high      Handle missing values in 'email'
-3   high      Convert 'age' to numeric type
-4   medium    Strip whitespace from 'name'
-5   medium    Standardize case in 'status'
-...
-
-Run 'datawash clean data.csv --ids 1,2,3' to apply specific suggestions.
+┏━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ # ┃ Priority ┃ Action                                  ┃ Because                                 ┃
+┡━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ 1 │   HIGH   │ Mask or redact PII in 'email'           │ Column 'email' contains 25 potential    │
+│   │          │                                         │ email addresses (100% of non-null       │
+│   │          │                                         │ values)                                 │
+│ 3 │  MEDIUM  │ Standardize date format in              │ Column 'signup_date' has mixed date     │
+│   │          │ 'signup_date'                           │ formats (12 YYYY-MM-DD, 3 NN/NN/YYYY, 3 │
+│   │          │                                         │ DD-Mon-YYYY, 7 Month DD, YYYY)          │
+│ 4 │   LOW    │ Strip whitespace from values in         │ Column 'first_name' has 1 value with    │
+│   │          │ 'first_name'                            │ leading/trailing whitespace             │
 ```
 
 ---
 
 ## datawash clean
 
-Clean a dataset by applying suggestions.
-
-### Usage
-
 ```bash
-datawash clean <FILE> [OPTIONS]
+datawash clean FILE -o OUTPUT (--apply IDS | --apply-all) [OPTIONS]
 ```
-
-### Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `FILE` | Path to the data file |
-
-### Options
 
 | Option | Description |
 |--------|-------------|
-| `--output`, `-o` | Output file path |
-| `--apply-all`, `-a` | Apply all suggestions |
-| `--ids`, `-i` | Comma-separated suggestion IDs to apply |
-| `--use-case`, `-u` | Use case: general, ml, analytics, export |
-| `--help` | Show help message |
-
-### Examples
+| `--output`, `-o` | Output file (required); the extension picks the format |
+| `--apply`, `-a` | Comma-separated suggestion IDs, e.g. `--apply 1,3,5` |
+| `--apply-all` | Apply every suggestion |
+| `--use-case`, `-u` | `general` (default), `ml`, `analytics` or `export` |
+| `--codegen` | Also save the generated Python code to this file |
+| `--mask-names` | Also mask name columns |
+| `--help` | Show help |
 
 ```bash
-# Apply all suggestions, save to file
 datawash clean data.csv -o clean.csv --apply-all
-
-# Apply specific suggestions
-datawash clean data.csv -o clean.csv --ids 1,2,5
-
-# Apply all with ML use case
-datawash clean data.csv -o clean.csv -a -u ml
-
-# Preview without saving (no -o flag)
-datawash clean data.csv --apply-all
+datawash clean data.csv -o clean.csv --apply 1,2,5 --codegen clean.py
+datawash clean data.csv -o clean.csv --apply-all -u ml
 ```
 
-### Output
+Output:
 
 ```
-DataWash Cleaning
-=================
+Saved cleaned data to clean.csv
+╭──────────────────────── Cleaning Summary ────────────────────────╮
+│ Applied 9 transformation(s)                                      │
+│ Rows: 30 → 30 (0 removed)                                        │
+╰──────────────────────────────────────────────────────────────────╯
+Quality score: 48 → 83 (+35)
+```
 
-Input: data.csv (1000 rows)
-Use case: general
+An ID that is not in the suggestion list stops the command before anything is
+written:
 
-Applying 8 suggestions...
-  [1] Remove duplicate rows: 15 rows affected
-  [2] Handle missing values in 'email': 50 rows affected
-  [3] Convert 'age' to numeric: 1000 rows affected
-  ...
-
-Quality Score: 72 → 95 (+23)
-Rows: 1000 → 985 (removed 15)
-
-Saved to: clean.csv
+```
+$ datawash clean data.csv -o clean.csv --apply 99
+Unknown suggestion ID(s): 99. Valid IDs are 1-9; see 'datawash suggest' with the same --use-case.
 ```
 
 ---
 
 ## datawash codegen
 
-Generate Python code for cleaning transformations.
-
-### Usage
-
 ```bash
-datawash codegen <FILE> [OPTIONS]
+datawash codegen FILE [OPTIONS]
 ```
 
-### Arguments
-
-| Argument | Description |
-|----------|-------------|
-| `FILE` | Path to the data file |
-
-### Options
+Applies every suggestion unless `--apply` is given, then prints the pandas code
+(or writes it with `-o`). Running the code on the input file gives the same
+result as `datawash clean` with the same options.
 
 | Option | Description |
 |--------|-------------|
-| `--output`, `-o` | Output file for generated code |
-| `--style`, `-s` | Code style: function, script (default: function) |
-| `--apply-all`, `-a` | Generate code for all suggestions |
-| `--ids`, `-i` | Comma-separated suggestion IDs |
-| `--use-case`, `-u` | Use case: general, ml, analytics, export |
-| `--help` | Show help message |
-
-### Examples
+| `--apply`, `-a` | Comma-separated suggestion IDs |
+| `--apply-all` | Generate code for all suggestions (the default) |
+| `--style`, `-s` | `function` (default) defines `clean_data(df)`; `script` reads and writes CSV |
+| `--output`, `-o` | Write the code to this file instead of printing it |
+| `--use-case`, `-u` | `general` (default), `ml`, `analytics` or `export` |
+| `--mask-names` | Also mask name columns |
+| `--help` | Show help |
 
 ```bash
-# Generate function for all suggestions
-datawash codegen data.csv --apply-all
-
-# Generate script for specific suggestions
-datawash codegen data.csv --ids 1,2,3 --style script
-
-# Save to file
-datawash codegen data.csv -a -o clean_data.py
+datawash codegen data.csv > clean_data.py
+datawash codegen data.csv --apply 4,8 --style script
 ```
 
-### Output (function style)
-
-```python
-def clean_data(df):
-    """Clean the dataset."""
-    import pandas as pd
-    import numpy as np
-
-    # Remove duplicate rows
-    df = df.drop_duplicates()
-
-    # Fill missing values in 'email'
-    df['email'] = df['email'].fillna(df['email'].mode().iloc[0])
-
-    # Convert 'age' to numeric
-    df['age'] = pd.to_numeric(df['age'], errors='coerce')
-
-    return df
-```
-
-### Output (script style)
+Output of the second command:
 
 ```python
 import pandas as pd
 import numpy as np
 
-# Remove duplicate rows
-df = df.drop_duplicates()
+# Load data
+df = pd.read_csv("input.csv")  # Update path as needed
 
-# Fill missing values in 'email'
-df['email'] = df['email'].fillna(df['email'].mode().iloc[0])
+# formats: 1 rows affected
+df['first_name'] = df['first_name'].astype(str).str.strip()
 
-# Convert 'age' to numeric
-df['age'] = pd.to_numeric(df['age'], errors='coerce')
+# formats: 25 rows affected
+df['first_name'] = df['first_name'].astype(str).str.lower()
+
+# Save cleaned data
+df.to_csv("output.csv", index=False)
 ```
+
+The code is printed as plain text, so piping it to a file gives a runnable
+script.
 
 ---
 
-## Global Options
-
-These options work with all commands:
-
-| Option | Description |
-|--------|-------------|
-| `--help` | Show help for any command |
-| `--version` | Show DataWash version |
-
-```bash
-datawash --version
-datawash analyze --help
-```
-
----
-
-## Exit Codes
+## Exit codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Error (file not found, invalid options, etc.) |
+| 1 | Bad input: missing, empty, unsupported or binary file; non-numeric or unknown `--apply` IDs; neither `--apply` nor `--apply-all` given to `clean`; unsupported output format |
+| 2 | Usage error from the argument parser (unknown option, missing argument) |
+
+Colors follow Rich's defaults: set `NO_COLOR=1` to turn them off.
 
 ---
 
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `DATAWASH_NO_COLOR` | Disable colored output |
+## Scripting
 
 ```bash
-DATAWASH_NO_COLOR=1 datawash analyze data.csv
-```
-
----
-
-## Tips
-
-### Piping Output
-
-```bash
-# Save analysis to file
-datawash analyze data.csv > report.txt
-
-# Pipe suggestions to grep
-datawash suggest data.csv | grep "missing"
-```
-
-### Scripting
-
-```bash
-#!/bin/bash
-# Clean multiple files
-
 for file in data/*.csv; do
-    output="clean/$(basename $file)"
-    datawash clean "$file" -o "$output" --apply-all
+    datawash clean "$file" -o "clean/$(basename "$file")" --apply-all
 done
-```
-
-### Combining with Other Tools
-
-```bash
-# Download, clean, and upload
-curl -O https://example.com/data.csv
-datawash clean data.csv -o clean.csv --apply-all
-aws s3 cp clean.csv s3://mybucket/
 ```

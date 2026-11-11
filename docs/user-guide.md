@@ -289,7 +289,8 @@ DataWash automatically orders transformations to prevent conflicts:
 3. **Missing value handling**: Fill NaN
 4. **Type conversion**: Boolean, numeric, dates
 5. **Outlier handling**: After types are correct
-6. **Column operations**: Drop, rename, merge
+6. **PII handling**: Mask, hash, redact or generalize the cleaned values
+7. **Column operations**: Drop, rename, merge
 
 ### Exclusion Rules
 
@@ -298,6 +299,8 @@ DataWash automatically excludes conflicting suggestions:
 - Boolean columns won't get case change suggestions
 - Date columns won't get case change suggestions
 - Numeric columns won't get case change suggestions
+- PII columns are never filled from other rows; empty strings become missing
+- Name-like columns (e.g. `customer_name`) are masked only with `mask_names` / `--mask-names`
 
 ---
 
