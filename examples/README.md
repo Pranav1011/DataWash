@@ -80,7 +80,7 @@ Input file: examples/sample_data/customers_messy.csv
 Dataset Overview:
   Rows: 30
   Columns: 8
-  Memory: 3.3 KB
+  Memory: 10.4 KB
   Duplicate rows: 0
   Quality Score: 48/100
 ...

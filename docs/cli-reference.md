@@ -39,7 +39,7 @@ Output (first panel):
 ```
 ╭──────────────────────── Dataset Overview ────────────────────────╮
 │ Data quality score: 48/100                                       │
-│ 30 rows x 8 columns | Memory: 3.3 KB | Duplicate rows: 0         │
+│ 30 rows x 8 columns | Memory: 10.4 KB | Duplicate rows: 0        │
 ╰──────────────────────────────────────────────────────────────────╯
 ```
 

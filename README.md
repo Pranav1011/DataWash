@@ -15,7 +15,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0">
   <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue" alt="Python">
-  <img src="https://img.shields.io/badge/tests-296%20passed%2C%2026%20skipped-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-297%20passed%2C%2026%20skipped-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-82%25-green" alt="Coverage">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
@@ -194,7 +194,7 @@ with penalties of 10 (high), 5 (medium) and 2 (low), clamped to 0–100
 
 Median of three `analyze()` runs on synthetic data from
 `tests/validate_performance.py` (seed 42), measured on an Apple M3 Pro
-(11 cores), Python 3.12, datawash 1.1.0:
+(11 cores), Python 3.12, pandas 3.1 with pyarrow (`[formats]`), datawash 1.1.0:
 
 | Dataset | `analyze()` time | Sampled |
 |---------|------------------|---------|
@@ -264,7 +264,7 @@ report = analyze(
 | Metric | Value | Command |
 |--------|-------|---------|
 | Version | 1.1.0 | `pyproject.toml` |
-| Tests | 296 passed, 26 skipped (ML deps not installed) | `pytest` |
+| Tests | 297 passed, 26 skipped (ML deps not installed) | `pytest` |
 | Coverage | 82% of `src/datawash` | `pytest --cov=datawash` on a `[dev]` install |
 | Python | 3.10, 3.11, 3.12 | |
 
@@ -285,7 +285,7 @@ git clone https://github.com/Pranav1011/DataWash.git
 cd DataWash
 pip install -e ".[dev]"
 
-pytest                       # 296 passed, 26 skipped
+pytest                       # 297 passed, 26 skipped
 pytest --cov=datawash        # 82%
 black src tests
 ruff check src tests
