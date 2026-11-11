@@ -35,6 +35,9 @@ class MLConfig(BaseModel):
 class SuggestionConfig(BaseModel):
     max_suggestions: int = 50
     min_confidence: float = 0.7
+    # Columns flagged as PII only by a name-like column name are not masked
+    # unless this is True
+    mask_names: bool = False
 
 
 class CodegenConfig(BaseModel):

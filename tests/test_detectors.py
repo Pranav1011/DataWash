@@ -212,3 +212,22 @@ class TestSimilarityDetector:
         findings = SimilarityDetector().detect(sample_df, profile)
         # May or may not find similarities in sample_df
         assert isinstance(findings, list)
+
+
+def test_mixed_date_message_uses_readable_formats() -> None:
+    df = pd.DataFrame(
+        {"d": ["2024-01-15", "15/02/2024", "Jan 30, 2024", "2024-02-01", "2024-03-01"]}
+    )
+    findings = FormatDetector().detect(df, profile_dataset(df))
+    message = next(
+        f.message for f in findings if f.issue_type == "inconsistent_date_format"
+    )
+    assert "3 YYYY-MM-DD, 1 NN/NN/YYYY, 1 Month DD, YYYY" in message
+    assert "slash_mdy" not in message
+
+
+def test_whitespace_counts_values_not_sides() -> None:
+    df = pd.DataFrame({"name": ["  Charlie  ", "Bob ", "Alice", "Dan", "Eve"]})
+    findings = FormatDetector().detect(df, profile_dataset(df))
+    message = next(f.message for f in findings if f.issue_type == "whitespace_padding")
+    assert "has 2 values with leading/trailing whitespace" in message

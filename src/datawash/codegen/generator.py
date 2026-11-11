@@ -20,9 +20,6 @@ def generate_code(
     Returns:
         Python source code as a string.
     """
-    if not results:
-        return "# No transformations to apply"
-
     lines: list[str] = []
 
     # Header
@@ -36,6 +33,9 @@ def generate_code(
         lines.append('    """Apply data cleaning transformations."""')
         lines.append("    df = df.copy()")
         lines.append("")
+        if not results:
+            lines.append("    # No transformations were applied")
+            lines.append("")
         for result in results:
             if include_comments:
                 lines.append(
@@ -54,6 +54,9 @@ def generate_code(
             lines.append("# Load data")
         lines.append('df = pd.read_csv("input.csv")  # Update path as needed')
         lines.append("")
+        if not results:
+            lines.append("# No transformations were applied")
+            lines.append("")
         for result in results:
             if include_comments:
                 lines.append(

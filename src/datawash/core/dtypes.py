@@ -22,3 +22,13 @@ def optimize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(df[col], downcast="float")
 
     return df
+
+
+def format_bytes(n: int) -> str:
+    """Human-readable size: '3.3 KB', not '0.0 MB'."""
+    size = float(n)
+    for unit in ("B", "KB", "MB"):
+        if size < 1024:
+            return f"{size:.0f} B" if unit == "B" else f"{size:.1f} {unit}"
+        size /= 1024
+    return f"{size:.1f} GB"

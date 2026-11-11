@@ -50,13 +50,38 @@ def _parse_ids(apply: str) -> list[int]:
         )
 
 
+def _check_ids(ids: list[int], report: Report) -> None:
+    """Exit with an error if any ID is not one of the report's suggestions."""
+    valid = {s.id for s in report.suggestions}
+    unknown = [i for i in ids if i not in valid]
+    if not unknown:
+        return
+    listed = ", ".join(str(i) for i in unknown)
+    if valid:
+        hint = f"Valid IDs are {min(valid)}-{max(valid)}"
+    else:
+        hint = "This file has no suggestions"
+    _fail(
+        f"Unknown suggestion ID(s): {listed}. {hint}; "
+        "see 'datawash suggest' with the same --use-case."
+    )
+
+
+def _config(mask_names: bool) -> dict[str, Any]:
+    """Report config built from CLI flags."""
+    return {"suggestions": {"mask_names": mask_names}}
+
+
+_MASK_NAMES_HELP = "Also suggest masking name columns (e.g. customer_name)"
+
+
 @app.command()
 def analyze(
     file: Path = typer.Argument(..., help="Path to data file"),
-    sample: Optional[int] = typer.Option(
-        None, "--sample", "-s", help="Number of rows to sample"
+    use_case: str = typer.Option(
+        "general", "--use-case", "-u", help="Context: general, ml, analytics, export"
     ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed output"),
+    mask_names: bool = typer.Option(False, "--mask-names", help=_MASK_NAMES_HELP),
 ) -> None:
     """Analyze a dataset and show quality report."""
     from datawash.cli.formatters import (
@@ -65,9 +90,9 @@ def analyze(
         format_suggestions,
     )
 
-    report = _load_report(file)
+    report = _load_report(file, use_case=use_case, config=_config(mask_names))
 
-    format_profile(report.profile)
+    format_profile(report.profile, quality_score=report.quality_score)
     console.print()
     format_issues(report.issues)
     console.print()
@@ -84,11 +109,12 @@ def suggest(
         "all", "--priority", "-p", help="Filter: high, medium, low, all"
     ),
     limit: int = typer.Option(20, "--limit", "-l", help="Max suggestions"),
+    mask_names: bool = typer.Option(False, "--mask-names", help=_MASK_NAMES_HELP),
 ) -> None:
     """Show cleaning suggestions for a dataset."""
     from datawash.cli.formatters import format_suggestions
 
-    report = _load_report(file, use_case=use_case)
+    report = _load_report(file, use_case=use_case, config=_config(mask_names))
 
     suggestions = report.suggestions
     if priority != "all":
@@ -110,23 +136,25 @@ def clean(
     codegen: Optional[Path] = typer.Option(
         None, "--codegen", help="Also save generated Python code"
     ),
+    mask_names: bool = typer.Option(False, "--mask-names", help=_MASK_NAMES_HELP),
 ) -> None:
     """Clean a dataset by applying suggestions."""
     from datawash.adapters.base import _ADAPTERS
     from datawash.cli.formatters import format_transformation_summary
 
-    report = _load_report(file, use_case=use_case)
+    if not apply_all and not apply:
+        _fail("Specify --apply or --apply-all")
+    ids = _parse_ids(apply) if apply and not apply_all else None
+
+    report = _load_report(file, use_case=use_case, config=_config(mask_names))
 
     before_rows = len(report.df)
 
-    if apply_all:
+    if ids is None:
         clean_df = report.apply_all()
-    elif apply:
-        ids = _parse_ids(apply)
-        clean_df = report.apply(ids)
     else:
-        console.print("[red]Specify --apply or --apply-all[/]")
-        raise typer.Exit(1)
+        _check_ids(ids, report)
+        clean_df = report.apply(ids)
 
     # Save output
     ext = output.suffix.lstrip(".")
@@ -171,17 +199,22 @@ def codegen(
     output: Optional[Path] = typer.Option(
         None, "--output", "-o", help="Output Python file"
     ),
+    use_case: str = typer.Option("general", "--use-case", "-u", help="Context"),
+    mask_names: bool = typer.Option(False, "--mask-names", help=_MASK_NAMES_HELP),
 ) -> None:
-    """Generate Python code for data cleaning transformations."""
-    report = _load_report(file)
+    """Generate Python code for data cleaning transformations.
 
-    if apply_all:
+    Applies all suggestions unless --apply is given.
+    """
+    ids = _parse_ids(apply) if apply and not apply_all else None
+
+    report = _load_report(file, use_case=use_case, config=_config(mask_names))
+
+    if ids is None:
         report.apply_all()
-    elif apply:
-        ids = _parse_ids(apply)
-        report.apply(ids)
     else:
-        report.apply_all()
+        _check_ids(ids, report)
+        report.apply(ids)
 
     code = report.generate_code(style=style)
 
@@ -189,7 +222,9 @@ def codegen(
         output.write_text(code)
         console.print(f"Saved code to [bold]{output}[/]")
     else:
-        console.print(code)
+        # Plain write: Rich would read brackets in the code as markup and
+        # wrap long lines, so the printed code would not run.
+        typer.echo(code, nl=False)
 
 
 if __name__ == "__main__":

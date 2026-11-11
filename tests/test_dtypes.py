@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from datawash.core.dtypes import optimize_dataframe
+from datawash.core.dtypes import format_bytes, optimize_dataframe
 
 
 class TestOptimizeDataframe:
@@ -64,3 +64,16 @@ class TestOptimizeDataframe:
         df = pd.DataFrame()
         optimized = optimize_dataframe(df)
         assert len(optimized.columns) == 0
+
+
+@pytest.mark.parametrize(
+    ("n", "expected"),
+    [
+        (502, "502 B"),
+        (3379, "3.3 KB"),
+        (5 * 1024 * 1024, "5.0 MB"),
+        (3 * 1024**3, "3.0 GB"),
+    ],
+)
+def test_format_bytes(n: int, expected: str) -> None:
+    assert format_bytes(n) == expected

@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from datawash.core.dtypes import format_bytes
 from datawash.core.models import DatasetProfile, Finding, Suggestion
 
 console = Console()
@@ -14,18 +15,28 @@ console = Console()
 SEVERITY_COLORS = {"high": "red", "medium": "yellow", "low": "green"}
 
 
-def format_profile(profile: DatasetProfile) -> None:
-    """Print dataset profile."""
-    console.print(
-        Panel(
-            f"[bold]{profile.row_count}[/] rows x "
-            f"[bold]{profile.column_count}[/] columns | "
-            f"Memory: [bold]"
-            f"{profile.memory_bytes / 1024 / 1024:.1f} MB[/] | "
-            f"Dupes: [bold]{profile.duplicate_row_count}[/]",
-            title="Dataset Overview",
-        )
+def _score_color(score: int) -> str:
+    if score >= 80:
+        return "green"
+    if score >= 60:
+        return "yellow"
+    return "red"
+
+
+def format_profile(profile: DatasetProfile, quality_score: int | None = None) -> None:
+    """Print dataset profile, led by the quality score when given."""
+    overview = (
+        f"[bold]{profile.row_count}[/] rows x "
+        f"[bold]{profile.column_count}[/] columns | "
+        f"Memory: [bold]{format_bytes(profile.memory_bytes)}[/] | "
+        f"Duplicate rows: [bold]{profile.duplicate_row_count}[/]"
     )
+    if quality_score is not None:
+        color = _score_color(quality_score)
+        overview = (
+            f"Data quality score: [bold {color}]{quality_score}/100[/]\n{overview}"
+        )
+    console.print(Panel(overview, title="Dataset Overview"))
 
     table = Table(title="Column Profiles")
     table.add_column("Column", style="cyan")
@@ -81,8 +92,7 @@ def format_suggestions(suggestions: list[Suggestion]) -> None:
     table.add_column("#", justify="right", style="bold")
     table.add_column("Priority", justify="center")
     table.add_column("Action")
-    table.add_column("Impact")
-    table.add_column("Rationale")
+    table.add_column("Because")
 
     for s in suggestions:
         color = SEVERITY_COLORS.get(s.priority.value, "white")
@@ -90,8 +100,7 @@ def format_suggestions(suggestions: list[Suggestion]) -> None:
             str(s.id),
             Text(s.priority.value.upper(), style=color),
             s.action,
-            s.impact,
-            s.rationale,
+            s.finding.message,
         )
 
     console.print(table)

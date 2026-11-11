@@ -18,11 +18,6 @@ TRANSFORMATION_ORDER: list[tuple[str, str]] = [
     ("duplicates", "drop_duplicates"),
     ("fuzzy_duplicates", "remove"),  # ML-based fuzzy duplicate removal
     ("missing", "drop_rows"),
-    # Phase 1.5: PII handling (before value normalization)
-    ("pii", "redact"),
-    ("pii", "mask"),
-    ("pii", "hash"),
-    ("pii", "generalize"),
     # Phase 2: Value normalization (changes string values)
     ("formats", "strip_whitespace"),
     ("formats", "lowercase"),
@@ -40,7 +35,12 @@ TRANSFORMATION_ORDER: list[tuple[str, str]] = [
     ("formats", "standardize_dates"),
     # Phase 5: Outlier handling (after types are correct)
     ("missing", "clip_outliers"),
-    # Phase 6: Column operations (last)
+    # Phase 6: PII handling, after the values it masks are cleaned and filled
+    ("pii", "redact"),
+    ("pii", "mask"),
+    ("pii", "hash"),
+    ("pii", "generalize"),
+    # Phase 7: Column operations (last)
     ("columns", "drop"),
     ("columns", "rename"),
     ("columns", "review_merge"),
@@ -114,6 +114,9 @@ def _get_transform_key(transformer: str, params: dict) -> tuple[str, str]:
     elif transformer == "pii":
         return (transformer, params.get("operation", ""))
     return (transformer, "")
+
+
+_FILL_STRATEGIES = frozenset({"fill_mode", "fill_median", "fill_value"})
 
 
 def _missing_strategy(finding: Finding) -> str:
@@ -271,6 +274,19 @@ _USE_CASE_BOOSTS: dict[str, dict[str, float]] = {
 }
 
 
+# Column-name matches that mean "person's name"; masking these is opt-in
+_NAME_PII_PATTERNS = frozenset({"name", "first_name", "last_name", "full_name"})
+
+
+def _is_name_pii(finding: Finding) -> bool:
+    """True for PII findings that only rest on a name-like column name."""
+    return (
+        finding.issue_type == "pii_detected"
+        and finding.details.get("detection_method") == "column_name"
+        and finding.details.get("matched_pattern") in _NAME_PII_PATTERNS
+    )
+
+
 def _deduplicate_pii_suggestions(suggestions: list[Suggestion]) -> list[Suggestion]:
     """Remove duplicate PII suggestions for the same column.
 
@@ -362,9 +378,18 @@ def generate_suggestions(
     findings: list[Finding],
     max_suggestions: int = 50,
     use_case: str = "general",
+    mask_names: bool = False,
 ) -> list[Suggestion]:
-    """Generate prioritized suggestions from findings."""
+    """Generate prioritized suggestions from findings.
+
+    PII columns are never filled: a filled email or name would be another
+    person's data. Masking columns that are PII only because of a name-like
+    column name (e.g. 'customer_name') happens only when mask_names is True.
+    """
     boosts = _USE_CASE_BOOSTS.get(use_case, {})
+    pii_columns = {
+        col for f in findings if f.issue_type == "pii_detected" for col in f.columns
+    }
     suggestions: list[Suggestion] = []
     for finding in findings:
         mapping = _SUGGESTION_MAP.get(finding.issue_type)
@@ -374,6 +399,14 @@ def generate_suggestions(
                 finding.issue_type,
             )
             continue
+        if _is_name_pii(finding) and not mask_names:
+            continue
+        params = mapping["params_fn"](finding)
+        if pii_columns.intersection(finding.columns):
+            if params.get("strategy") in _FILL_STRATEGIES:
+                continue
+            if params.get("strategy") == "clean_empty_strings":
+                params["fill_strategy"] = "none"
 
         # Apply use-case priority boost
         priority = finding.severity
@@ -394,7 +427,7 @@ def generate_suggestions(
             finding=finding,
             action=action,
             transformer=mapping["transformer"],
-            params=mapping["params_fn"](finding),
+            params=params,
             priority=priority,
             impact=mapping["impact"],
             rationale=mapping["rationale"],

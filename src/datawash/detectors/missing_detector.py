@@ -45,7 +45,8 @@ class MissingDetector(BaseDetector):
                     message=(
                         f"Column '{col_name}' has "
                         f"{col_profile.null_count} missing "
-                        f"values ({col_profile.null_ratio:.1%})"
+                        f"value{'' if col_profile.null_count == 1 else 's'} "
+                        f"({col_profile.null_ratio:.1%})"
                     ),
                     confidence=1.0,
                 )

@@ -64,6 +64,21 @@ class TestMissingTransformer:
         assert result_df["a"].iloc[1] == "x"
         assert result_df["a"].iloc[3] == "x"
 
+    def test_clean_empty_strings_without_fill(self) -> None:
+        """fill_strategy='none' marks empties as missing and fills nothing."""
+        df = pd.DataFrame({"a": ["x", "", "x", None, "y"]})
+        params = {
+            "strategy": "clean_empty_strings",
+            "columns": ["a"],
+            "fill_strategy": "none",
+        }
+        result_df, result = run_transformer("missing", df, **params)
+        assert result_df["a"].isna().tolist() == [False, True, False, True, False]
+        assert result.rows_affected == 1
+        namespace = {"pd": pd, "np": np, "df": df.copy()}
+        exec(result.code, namespace)
+        pd.testing.assert_frame_equal(namespace["df"], result_df)
+
     def test_clean_empty_strings_uses_specified_fill_value(self) -> None:
         """clean_empty_strings can use a custom fill value."""
         df = pd.DataFrame({"a": ["x", "", "y"]})

@@ -15,7 +15,7 @@ from datawash.adapters import load_dataframe
 from datawash.codegen import generate_code as _generate_code
 from datawash.core.cache import ComputationCache
 from datawash.core.config import Config
-from datawash.core.dtypes import optimize_dataframe
+from datawash.core.dtypes import format_bytes, optimize_dataframe
 from datawash.core.models import (
     DatasetProfile,
     Finding,
@@ -104,6 +104,7 @@ class Report:
             self._findings,
             max_suggestions=self._config.suggestions.max_suggestions,
             use_case=self._config.use_case,
+            mask_names=self._config.suggestions.mask_names,
         )
         # None until apply()/apply_interactive() runs; [] means nothing applied.
         self._applied: list[TransformationResult] | None = None
@@ -382,7 +383,7 @@ class Report:
         lines = [
             f"Dataset: {self._profile.row_count} rows "
             f"x {self._profile.column_count} columns",
-            f"Memory: {self._profile.memory_bytes / 1024 / 1024:.1f} MB",
+            f"Memory: {format_bytes(self._profile.memory_bytes)}",
             f"Duplicate rows: {self._profile.duplicate_row_count}",
             f"Data Quality Score: {self.quality_score}/100",
             f"Issues found: {len(self._findings)}",

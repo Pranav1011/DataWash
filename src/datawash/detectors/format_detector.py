@@ -78,6 +78,15 @@ class FormatDetector(BaseDetector):
         ("named_dmy", r"^\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}$"),
     ]
 
+    # How each pattern reads in messages; NN/NN is day- or month-first
+    _DATE_LABELS: dict[str, str] = {
+        "iso": "YYYY-MM-DD",
+        "slash_mdy": "NN/NN/YYYY",
+        "dash_dmy": "DD-Mon-YYYY",
+        "named_mdy": "Month DD, YYYY",
+        "named_dmy": "DD Month YYYY",
+    }
+
     def _check_date_formats(self, col_name: str, series: pd.Series) -> Finding | None:
         # Count how many distinct format patterns appear
         format_counts: dict[str, int] = {}
@@ -89,7 +98,8 @@ class FormatDetector(BaseDetector):
         total_matched = sum(format_counts.values())
         if len(format_counts) >= 2 and total_matched / len(series) >= 0.5:
             detail_str = ", ".join(
-                f"{count} {name}" for name, count in format_counts.items()
+                f"{count} {self._DATE_LABELS[name]}"
+                for name, count in format_counts.items()
             )
             return Finding(
                 detector=self.name,
@@ -110,7 +120,7 @@ class FormatDetector(BaseDetector):
     def _check_whitespace(self, col_name: str, series: pd.Series) -> Finding | None:
         leading = (series != series.str.lstrip()).sum()
         trailing = (series != series.str.rstrip()).sum()
-        total = int(leading + trailing)
+        total = int((series != series.str.strip()).sum())
         if total > 0:
             return Finding(
                 detector=self.name,
@@ -121,7 +131,10 @@ class FormatDetector(BaseDetector):
                     "leading_spaces": int(leading),
                     "trailing_spaces": int(trailing),
                 },
-                message=f"Column '{col_name}' has {total} values with leading/trailing whitespace",
+                message=(
+                    f"Column '{col_name}' has {total} "
+                    f"value{'' if total == 1 else 's'} with leading/trailing whitespace"
+                ),
                 confidence=1.0,
             )
         return None

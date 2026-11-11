@@ -79,6 +79,11 @@ class MissingTransformer(BaseTransformer):
                 else:
                     empty_count = 0
 
+                # "none" only marks empties as missing (used for PII columns)
+                if fill_strategy == "none":
+                    affected += empty_count
+                    continue
+
                 # Now fill NaN values
                 null_count = int(result_df[col].isna().sum())
                 if null_count > 0:

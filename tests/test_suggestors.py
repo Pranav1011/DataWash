@@ -54,7 +54,7 @@ def test_missing_strategy_numeric_column() -> None:
 
 def test_missing_strategy_string_column() -> None:
     """String columns should get fill_mode, not fill_median."""
-    df = pd.DataFrame({"email": ["a@b.com", "c@d.com", None, "e@f.com", "g@h.com"]})
+    df = pd.DataFrame({"city": ["Boston", "Austin", None, "Denver", "Boston"]})
     profile = profile_dataset(df)
     findings = run_all_detectors(df, profile)
     suggestions = generate_suggestions(findings)
@@ -210,3 +210,65 @@ def test_numeric_excludes_case_changes() -> None:
     ]
     case_cols = [c for s in case_suggs for c in s.params.get("columns", [])]
     assert "amount" not in case_cols
+
+
+def _suggest(df: pd.DataFrame, **kwargs: object) -> list:
+    profile = profile_dataset(df)
+    return generate_suggestions(run_all_detectors(df, profile), **kwargs)
+
+
+def test_pii_column_is_never_filled() -> None:
+    df = pd.DataFrame(
+        {
+            "email": ["a@b.com", None, "c@d.com", "d@e.com", "e@f.com"],
+            "score": [1.0, None, 3.0, 4.0, 5.0],
+        }
+    )
+    suggestions = _suggest(df)
+    fills = {
+        col
+        for s in suggestions
+        if s.transformer == "missing"
+        for col in s.params["columns"]
+    }
+    assert "email" not in fills
+    assert "score" in fills
+    assert any(s.transformer == "pii" for s in suggestions)
+
+
+def test_pii_empty_strings_become_missing_without_fill() -> None:
+    df = pd.DataFrame({"email": ["a@b.com", "", "c@d.com", "  ", "e@f.com"]})
+    empty = [s for s in _suggest(df) if s.finding.issue_type == "empty_strings"]
+    assert empty
+    assert all(s.params["fill_strategy"] == "none" for s in empty)
+
+
+@pytest.mark.parametrize(
+    "earlier",
+    [
+        ("formats", {"operation": "strip_whitespace"}),
+        ("formats", {"operation": "lowercase"}),
+        ("missing", {"strategy": "fill_mode"}),
+        ("missing", {"strategy": "fill_median"}),
+        ("missing", {"strategy": "clean_empty_strings"}),
+        ("types", {"target_type": "boolean"}),
+        ("formats", {"operation": "standardize_dates"}),
+        ("missing", {"strategy": "clip_outliers"}),
+    ],
+)
+@pytest.mark.parametrize("pii_op", ["mask", "hash", "redact", "generalize"])
+def test_pii_runs_after_value_cleaning(earlier: tuple, pii_op: str) -> None:
+    from datawash.suggestors.engine import _get_transform_order
+
+    transformer, params = earlier
+    assert _get_transform_order("pii", {"operation": pii_op}) > _get_transform_order(
+        transformer, params
+    )
+
+
+@pytest.mark.parametrize("mask_names", [False, True])
+def test_name_masking_is_opt_in(mask_names: bool) -> None:
+    df = pd.DataFrame({"customer_name": ["Alice Smith", "Bob Jones", "Carol King"]})
+    suggestions = _suggest(df, mask_names=mask_names)
+    masked = [s for s in suggestions if s.transformer == "pii"]
+    assert bool(masked) is mask_names
