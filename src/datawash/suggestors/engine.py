@@ -29,18 +29,19 @@ TRANSFORMATION_ORDER: list[tuple[str, str]] = [
     ("missing", "fill_median"),
     ("missing", "fill_value"),
     ("missing", "empty_to_nan"),  # legacy, prefer clean_empty_strings
+    # Phase 3.5: PII handling, after the text it masks is cleaned and filled
+    # but before type conversion (masking calls str() on every value)
+    ("pii", "redact"),
+    ("pii", "mask"),
+    ("pii", "hash"),
+    ("pii", "generalize"),
     # Phase 4: Type conversion (after all string cleaning done)
     ("types", "boolean"),
     ("types", "numeric"),
     ("formats", "standardize_dates"),
     # Phase 5: Outlier handling (after types are correct)
     ("missing", "clip_outliers"),
-    # Phase 6: PII handling, after the values it masks are cleaned and filled
-    ("pii", "redact"),
-    ("pii", "mask"),
-    ("pii", "hash"),
-    ("pii", "generalize"),
-    # Phase 7: Column operations (last)
+    # Phase 6: Column operations (last)
     ("columns", "drop"),
     ("columns", "rename"),
     ("columns", "review_merge"),
@@ -382,13 +383,17 @@ def generate_suggestions(
 ) -> list[Suggestion]:
     """Generate prioritized suggestions from findings.
 
-    PII columns are never filled: a filled email or name would be another
-    person's data. Masking columns that are PII only because of a name-like
-    column name (e.g. 'customer_name') happens only when mask_names is True.
+    PII columns are never filled: a filled email or phone would be another
+    person's data. Columns that are PII only because of a name-like column
+    name (e.g. 'customer_name', but also 'product_name') are treated as PII,
+    masked and left unfilled, only when mask_names is True.
     """
     boosts = _USE_CASE_BOOSTS.get(use_case, {})
     pii_columns = {
-        col for f in findings if f.issue_type == "pii_detected" for col in f.columns
+        col
+        for f in findings
+        if f.issue_type == "pii_detected" and (mask_names or not _is_name_pii(f))
+        for col in f.columns
     }
     suggestions: list[Suggestion] = []
     for finding in findings:

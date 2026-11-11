@@ -81,8 +81,8 @@ class FormatDetector(BaseDetector):
     # How each pattern reads in messages; NN/NN is day- or month-first
     _DATE_LABELS: dict[str, str] = {
         "iso": "YYYY-MM-DD",
-        "slash_mdy": "NN/NN/YYYY",
-        "dash_dmy": "DD-Mon-YYYY",
+        "slash_mdy": "NN/NN/YY(YY)",
+        "dash_dmy": "DD-Mon-YY(YY)",
         "named_mdy": "Month DD, YYYY",
         "named_dmy": "DD Month YYYY",
     }

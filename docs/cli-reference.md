@@ -76,8 +76,8 @@ Output (trimmed):
 │   │          │                                         │ email addresses (100% of non-null       │
 │   │          │                                         │ values)                                 │
 │ 3 │  MEDIUM  │ Standardize date format in              │ Column 'signup_date' has mixed date     │
-│   │          │ 'signup_date'                           │ formats (12 YYYY-MM-DD, 3 NN/NN/YYYY, 3 │
-│   │          │                                         │ DD-Mon-YYYY, 7 Month DD, YYYY)          │
+│   │          │ 'signup_date'                           │ formats (12 YYYY-MM-DD, 3 NN/NN/YY(YY), │
+│   │          │                                         │ 3 DD-Mon-YY(YY), 7 Month DD, YYYY)      │
 │ 4 │   LOW    │ Strip whitespace from values in         │ Column 'first_name' has 1 value with    │
 │   │          │ 'first_name'                            │ leading/trailing whitespace             │
 ```
@@ -122,7 +122,7 @@ written:
 
 ```
 $ datawash clean data.csv -o clean.csv --apply 99
-Unknown suggestion ID(s): 99. Valid IDs are 1-9; see 'datawash suggest' with the same --use-case.
+Unknown suggestion ID(s): 99. Valid IDs are 1-9; see 'datawash suggest' with the same --use-case and --mask-names.
 ```
 
 ---

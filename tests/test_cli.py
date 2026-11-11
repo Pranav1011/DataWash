@@ -256,6 +256,11 @@ def test_codegen_stdout_script_style_with_brackets(tmp_path: Path) -> None:
     compile(result.output, "generated.py", "exec")
 
 
+def test_analyze_accepts_deprecated_flags(csv_file: Path) -> None:
+    result = runner.invoke(app, ["analyze", str(csv_file), "-v", "--sample", "10"])
+    assert result.exit_code == 0
+
+
 def test_analyze_shows_quality_score(csv_file: Path) -> None:
     result = runner.invoke(app, ["analyze", str(csv_file)])
     assert result.exit_code == 0

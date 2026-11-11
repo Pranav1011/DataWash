@@ -287,9 +287,9 @@ DataWash automatically orders transformations to prevent conflicts:
 1. **Structural cleaning**: Duplicates, drop rows
 2. **Value normalization**: Whitespace, case changes
 3. **Missing value handling**: Fill NaN
-4. **Type conversion**: Boolean, numeric, dates
-5. **Outlier handling**: After types are correct
-6. **PII handling**: Mask, hash, redact or generalize the cleaned values
+4. **PII handling**: Mask, hash, redact or generalize the cleaned values
+5. **Type conversion**: Boolean, numeric, dates
+6. **Outlier handling**: After types are correct
 7. **Column operations**: Drop, rename, merge
 
 ### Exclusion Rules

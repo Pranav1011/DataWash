@@ -144,11 +144,12 @@ config = {
 ```
 
 PII columns (emails, phones, SSNs and so on) get a masking suggestion, and it
-runs after whitespace, case and type fixes so the masked text is the cleaned
-value. PII columns are never filled from other rows, since that would copy one
+runs after whitespace, case and fill fixes so the masked text is the cleaned
+value, and before type conversion. PII columns are never filled from other rows, since that would copy one
 person's email or phone onto another. Columns flagged only because their name
 looks like a person's name (`name`, `first_name`, `last_name`, `full_name`) are
-not masked unless `mask_names` is `True` (CLI: `--mask-names`).
+treated as PII (masked, never filled) only when `mask_names` is `True` (CLI:
+`--mask-names`); the match is a substring, so `product_name` counts too.
 
 ### Code Generation Configuration
 

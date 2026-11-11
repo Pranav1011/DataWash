@@ -222,7 +222,7 @@ def test_mixed_date_message_uses_readable_formats() -> None:
     message = next(
         f.message for f in findings if f.issue_type == "inconsistent_date_format"
     )
-    assert "3 YYYY-MM-DD, 1 NN/NN/YYYY, 1 Month DD, YYYY" in message
+    assert "3 YYYY-MM-DD, 1 NN/NN/YY(YY), 1 Month DD, YYYY" in message
     assert "slash_mdy" not in message
 
 

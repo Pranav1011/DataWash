@@ -251,9 +251,6 @@ def test_pii_empty_strings_become_missing_without_fill() -> None:
         ("missing", {"strategy": "fill_mode"}),
         ("missing", {"strategy": "fill_median"}),
         ("missing", {"strategy": "clean_empty_strings"}),
-        ("types", {"target_type": "boolean"}),
-        ("formats", {"operation": "standardize_dates"}),
-        ("missing", {"strategy": "clip_outliers"}),
     ],
 )
 @pytest.mark.parametrize("pii_op", ["mask", "hash", "redact", "generalize"])
@@ -264,6 +261,33 @@ def test_pii_runs_after_value_cleaning(earlier: tuple, pii_op: str) -> None:
     assert _get_transform_order("pii", {"operation": pii_op}) > _get_transform_order(
         transformer, params
     )
+
+
+@pytest.mark.parametrize(
+    "later",
+    [
+        ("types", {"target_type": "boolean"}),
+        ("types", {"target_type": "numeric"}),
+        ("formats", {"operation": "standardize_dates"}),
+        ("missing", {"strategy": "clip_outliers"}),
+    ],
+)
+def test_pii_runs_before_type_conversion(later: tuple) -> None:
+    """Masking str()s every value, so it must not undo typed columns."""
+    from datawash.suggestors.engine import _get_transform_order
+
+    transformer, params = later
+    assert _get_transform_order("pii", {"operation": "mask"}) < _get_transform_order(
+        transformer, params
+    )
+
+
+def test_name_like_column_is_still_filled_without_mask_names() -> None:
+    df = pd.DataFrame({"product_name": ["Lamp", None, "Desk", "Lamp", "Chair"]})
+    fills = [s for s in _suggest(df) if s.transformer == "missing"]
+    assert [s.params["strategy"] for s in fills] == ["fill_mode"]
+    with_names = _suggest(df, mask_names=True)
+    assert not [s for s in with_names if s.transformer == "missing"]
 
 
 @pytest.mark.parametrize("mask_names", [False, True])

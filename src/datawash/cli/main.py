@@ -66,7 +66,7 @@ def _check_ids(ids: list[int], report: Report) -> None:
         hint = "This file has no suggestions"
     _fail(
         f"Unknown suggestion ID(s): {listed}. {hint}; "
-        "see 'datawash suggest' with the same --use-case."
+        "see 'datawash suggest' with the same --use-case and --mask-names."
     )
 
 
@@ -85,6 +85,9 @@ def analyze(
         "general", "--use-case", "-u", help="Context: general, ml, analytics, export"
     ),
     mask_names: bool = typer.Option(False, "--mask-names", help=_MASK_NAMES_HELP),
+    # Deprecated: accepted so existing scripts keep working; they never had an effect
+    sample: Optional[int] = typer.Option(None, "--sample", "-s", hidden=True),
+    verbose: bool = typer.Option(False, "--verbose", "-v", hidden=True),
 ) -> None:
     """Analyze a dataset and show quality report."""
     from datawash.cli.formatters import (

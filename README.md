@@ -15,7 +15,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version 1.1.0">
   <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue" alt="Python">
-  <img src="https://img.shields.io/badge/tests-297%20passed%2C%2026%20skipped-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-292%20passed%2C%2026%20skipped-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/coverage-82%25-green" alt="Coverage">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
@@ -145,8 +145,8 @@ file / DataFrame
                            (PII dedupe, conflict exclusion, use-case boost)
 Report.apply(ids)
   └─ suggestions sorted into execution phases, run on the FULL DataFrame:
-     1 duplicates / drop rows → 2 strip + case → 3 fills → 4 type conversion
-     → 5 outlier clipping → 6 PII masking → 7 column operations
+     1 duplicates / drop rows → 2 strip + case → 3 fills → 4 PII masking
+     → 5 type conversion + dates → 6 outlier clipping → 7 column operations
        └─ each transformer returns (new DataFrame, TransformationResult with code)
             ├─ codegen: concatenates the code into clean_data(df) or a script
             └─ re-analysis of the result ──> score after
@@ -171,11 +171,14 @@ with penalties of 10 (high), 5 (medium) and 2 (low), clamped to 0–100
 - **PII handling.** Detection is regex plus column-name heuristics, so expect
   misses and false positives. Masking keeps the last 4 characters (`****.com`),
   which reduces exposure but is not anonymization; use `hash` or `redact` when
-  that matters. Masking runs after other fixes so it masks cleaned values. PII
+  that matters. Masking runs after strip, case and fill fixes, so it masks the
+  cleaned text, and before type conversion, so typed columns stay typed. PII
   columns are never filled from other rows (that would copy one person's email
-  onto another), and empty strings in them become missing. Columns that are PII
-  only because of a name-like column name (`name`, `first_name`, …) are masked
-  only with `--mask-names` / `config={"suggestions": {"mask_names": True}}`.
+  onto another), and empty strings in them become missing. Columns that are
+  PII only because their name contains `name` are treated as PII (masked and
+  left unfilled) only with `--mask-names` /
+  `config={"suggestions": {"mask_names": True}}`. That match is a substring,
+  so `product_name` counts too.
 - **Suggestion IDs are positions in a ranked list.** They change with
   `--use-case` and `--mask-names`, so pass the same flags to `suggest` and
   `clean`.
@@ -264,7 +267,7 @@ report = analyze(
 | Metric | Value | Command |
 |--------|-------|---------|
 | Version | 1.1.0 | `pyproject.toml` |
-| Tests | 297 passed, 26 skipped (ML deps not installed) | `pytest` |
+| Tests | 292 passed, 26 skipped (ML deps not installed) | `pytest` |
 | Coverage | 82% of `src/datawash` | `pytest --cov=datawash` on a `[dev]` install |
 | Python | 3.10, 3.11, 3.12 | |
 
@@ -285,7 +288,7 @@ git clone https://github.com/Pranav1011/DataWash.git
 cd DataWash
 pip install -e ".[dev]"
 
-pytest                       # 297 passed, 26 skipped
+pytest                       # 292 passed, 26 skipped
 pytest --cov=datawash        # 82%
 black src tests
 ruff check src tests

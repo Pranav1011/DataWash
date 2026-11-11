@@ -14,10 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 - `datawash codegen` printed generated code as Rich markup and crashed with `MarkupError` on code containing brackets such as `[/.-]`; it now prints plain text, which also stops long lines being wrapped.
-- PII masking ran before whitespace, case and fill fixes, so padded names were masked with their padding and missing emails were filled with already-masked values. Masking now runs after all value fixes, PII columns are never filled from other rows, and empty strings in them become missing.
+- PII masking ran before whitespace, case and fill fixes, so padded names were masked with their padding and missing emails were filled with already-masked values. Masking now runs after strip, case and fill fixes (and before type conversion), PII columns are never filled from other rows, and empty strings in them become missing.
 - `clean` and `codegen` exit with code 1 on suggestion IDs that do not exist (e.g. `--apply 999`) instead of writing unchanged output; generated code always defines `clean_data()`.
 - The example CSVs quote dates that contain commas, so `csv_cleaning.py` and `ml_preprocessing.py` run again; example docstrings use `--apply` (there is no `--ids` flag).
-- Whitespace findings count padded values once, not once per side; messages use "1 missing value", readable date formats (`NN/NN/YYYY` instead of `slash_mdy`) and B/KB/MB sizes.
+- Whitespace findings count padded values once, not once per side; messages use "1 missing value", readable date formats (`NN/NN/YY(YY)` instead of `slash_mdy`) and B/KB/MB sizes.
 - Date standardization now parses mixed formats (e.g. `2024-01-15`, `01/20/2024`, `Jan 30, 2024`) on pandas 2 and 3; previously only values matching the first format were converted. Numeric dates such as `03/04/2024` are read day-first or month-first per column, based on values that can only be read one way; when a column has no such evidence or both kinds, those dates are left unchanged and reported as a warning. Generated code uses the same parsing, and "rows affected" counts only values that changed.
 - CLI errors for missing, empty, unsupported or binary files and non-numeric `--apply` IDs now print one red line with a fix and exit with code 1, instead of a traceback.
 
