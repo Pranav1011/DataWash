@@ -74,3 +74,5 @@ test_full_functionality.py
 
 # Demo Data
 /Demo data/
+# Files written by examples/csv_cleaning.py
+examples/output/

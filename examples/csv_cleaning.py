@@ -17,7 +17,7 @@ Run this example:
 CLI equivalent:
     datawash analyze examples/sample_data/customers_messy.csv
     datawash suggest examples/sample_data/customers_messy.csv --use-case general
-    datawash clean examples/sample_data/customers_messy.csv -o customers_clean.csv --ids 1,2,3
+    datawash clean examples/sample_data/customers_messy.csv -o customers_clean.csv --apply 1,2,3
 """
 
 import os
@@ -30,7 +30,9 @@ def main():
     # Get the path to sample data
     script_dir = Path(__file__).parent
     input_file = script_dir / "sample_data" / "customers_messy.csv"
-    output_file = script_dir / "sample_data" / "customers_clean.csv"
+    output_dir = script_dir / "output"
+    output_dir.mkdir(exist_ok=True)
+    output_file = output_dir / "customers_clean.csv"
 
     # =========================================================================
     # Step 1: Load and analyze the CSV
@@ -78,7 +80,7 @@ def main():
     # =========================================================================
     # Step 4: Apply selected suggestions (not all)
     # =========================================================================
-    # CLI: datawash clean customers_messy.csv -o customers_clean.csv --ids 1,2,3,4,5
+    # CLI: datawash clean customers_messy.csv -o customers_clean.csv --apply 1,2,3,4,5
 
     print("\n" + "=" * 70)
     print("STEP 4: Applying selected fixes")
@@ -149,23 +151,20 @@ def main():
     # =========================================================================
     # Step 7: Generate code for reproducibility
     # =========================================================================
-    # CLI: datawash codegen customers_messy.csv --ids 1,2,3,4,5 --style script
+    # CLI: datawash codegen customers_messy.csv --apply 1,2,3,4,5 --style script
 
     print("\n" + "=" * 70)
     print("STEP 7: Generated cleaning script")
     print("=" * 70)
 
-    code = report.generate_code(style="script")
-    print(code)
+    print(report.generate_code(style="script"))
 
-    # Optionally save the code to a file
-    code_file = script_dir / "sample_data" / "clean_customers.py"
+    # Save a reusable clean_data() function plus a __main__ block
+    code_file = output_dir / "clean_customers.py"
     with open(code_file, "w") as f:
         f.write("#!/usr/bin/env python3\n")
         f.write('"""Auto-generated data cleaning script."""\n\n')
-        f.write("import pandas as pd\n")
-        f.write("import numpy as np\n\n")
-        f.write(code)
+        f.write(report.generate_code(style="function"))
         f.write('\n\nif __name__ == "__main__":\n')
         f.write('    df = pd.read_csv("customers_messy.csv")\n')
         f.write("    df = clean_data(df)\n")

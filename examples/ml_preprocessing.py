@@ -78,7 +78,7 @@ def main():
     for s in report_general.suggestions[:8]:
         print(f"  [{s.priority.value:6}] {s.action}")
 
-    print("\nML use case priorities (notice reordering):")
+    print("\nML use case priorities (ml boosts duplicates, missing values and type fixes):")
     for s in report_ml.suggestions[:8]:
         print(f"  [{s.priority.value:6}] {s.action}")
 

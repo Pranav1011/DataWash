@@ -50,29 +50,23 @@ jupyter notebook examples/jupyter_demo.ipynb
 
 ## Example Outputs
 
+Excerpts from running each script on datawash 1.1.0.
+
 ### quickstart.py
 
 ```
-============================================================
-STEP 1: Creating messy sample data
-============================================================
-
-Original Data:
-         name           email age  salary is_active      hire_date
-0  John Smith  john@email.com  28   50000       yes     2023-01-15
-1    JANE DOE                  34   62000       Yes     15/02/2023
-...
-
 ============================================================
 STEP 2: Analyzing data with DataWash
 ============================================================
 
 Dataset: 5 rows x 6 columns
-Quality Score: 52/100
-Issues Found: 6
-Suggestions: 5
-
+Quality Score: 60/100
+Issues Found: 11
+Suggestions: 7
 ...
+  Original Quality Score: 60/100
+  Final Quality Score:    90/100
+  Improvement:            +30 points
 ```
 
 ### csv_cleaning.py
@@ -86,46 +80,28 @@ Input file: examples/sample_data/customers_messy.csv
 Dataset Overview:
   Rows: 30
   Columns: 8
-  Memory: 2.3 KB
-  Duplicate rows: 2
-  Quality Score: 65/100
-
+  Memory: 3.3 KB
+  Duplicate rows: 0
+  Quality Score: 48/100
 ...
 ```
+
+It writes `customers_clean.csv` and `clean_customers.py` to `examples/output/`
+(git-ignored).
 
 ### ml_preprocessing.py
 
 ```
 ======================================================================
-ML PREPROCESSING WITH DATAWASH
-======================================================================
-
-Loading: examples/sample_data/employees_messy.csv
-Dataset: 40 rows x 9 columns
-
-======================================================================
 COMPARING USE CASES: general vs ml
 ======================================================================
 
-[GENERAL] Quality Score: 58/100
-[GENERAL] Suggestions: 8
+[GENERAL] Quality Score: 71/100
+[GENERAL] Suggestions: 9
 
-[ML] Quality Score: 58/100
-[ML] Suggestions: 8
-
-======================================================================
-PRIORITY COMPARISON
-======================================================================
-
-General use case priorities:
-  [high  ] Remove 2 duplicate rows
-  [medium] Handle missing values in 'full_name'
-  ...
-
-ML use case priorities (notice reordering):
-  [high  ] Remove 2 duplicate rows
-  [high  ] Handle missing values in 'full_name'
-  ...
+[ML] Quality Score: 71/100
+[ML] Suggestions: 9
+...
 ```
 
 ## Customizing Examples
