@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [1.1.0] - Unreleased
+## [1.1.0] - 2026-11-11
 
 ### Added
 - ML-powered semantic duplicate detection (`analyze(..., ml_features=True)`, needs `pip install "datawash[ml]>=1.1.0"`).
@@ -24,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### Changed
 - Minimum pandas version raised to 2.0 (needed for `format="mixed"` date parsing).
 - The suggestions table shows the finding behind each suggestion instead of repeated impact and rationale text.
-- Removed the `--sample` and `--verbose` options of `analyze`, which had no effect.
+- Hid the `--sample` and `--verbose` options of `analyze`, which never had an effect; they are still accepted so existing scripts keep working.
 
 ## [1.0.0] - 2026-02-07
 
